@@ -19,7 +19,11 @@ class VideoDetailPage extends ConsumerStatefulWidget {
   final DoubanSubject subject;
   final VideoDetail? initialVideo;
 
-  const VideoDetailPage({super.key, required this.subject, this.initialVideo});
+  /// 锁定的视频源。非 null 时，"源站" tab 只显示该源（用于影视页直通场景）。
+  /// 与 initialVideo 配合使用时，initialVideo 必须来自该源。
+  final SiteConfig? lockedSite;
+
+  const VideoDetailPage({super.key, required this.subject, this.initialVideo, this.lockedSite});
 
   @override
   ConsumerState<VideoDetailPage> createState() => _VideoDetailPageState();
@@ -868,8 +872,15 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     if (_isSearching) {
       statusText = '正在全网搜索源站...';
     } else if (_isOptimizing) statusText = '正在进行实时优选...';
-    final currentSource = _currentSource;
-    final otherSources = _availableSources.where((s) => s != currentSource).toList();
+    // 锁定源时只显示该源
+    final lockedKey = widget.lockedSite?.key;
+    final visibleSources = lockedKey == null
+        ? _availableSources
+        : _availableSources.where((s) => s.source == lockedKey).toList();
+    final currentSource = _currentSource != null && (lockedKey == null || _currentSource!.source == lockedKey)
+        ? _currentSource
+        : (visibleSources.isNotEmpty ? visibleSources.first : null);
+    final otherSources = visibleSources.where((s) => s != currentSource).toList();
     otherSources.sort((a, b) => (_scoreMap['${b.source}-${b.id}'] ?? -1.0).compareTo(_scoreMap['${a.source}-${a.id}'] ?? -1.0));
     return Column(
       children: [

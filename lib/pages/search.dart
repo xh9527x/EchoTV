@@ -11,7 +11,11 @@ import '../providers/settings_provider.dart';
 import 'video_detail.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
-  const SearchPage({super.key});
+  /// 锁定的视频源。为 null 时为全源搜索（含聚合开关）；
+  /// 非 null 时只搜索该源，隐藏聚合开关。
+  final SiteConfig? lockedSite;
+
+  const SearchPage({super.key, this.lockedSite});
 
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
@@ -100,6 +104,25 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     final cmsService = ref.read(cmsServiceProvider);
     final configService = ref.read(configServiceProvider);
+
+    // 锁定源：只搜当前源
+    final locked = widget.lockedSite;
+    if (locked != null) {
+      try {
+        final siteResults = await cmsService.search(locked, searchText);
+        if (!mounted) return;
+        final filteredResults = _filterAndSortResults(siteResults, searchText);
+        setState(() {
+          _results = filteredResults;
+          _aggregatedResults = {};
+          _isLoading = false;
+        });
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
+      }
+      return;
+    }
+
     final sites = await configService.getSites();
     final activeSites = sites.where((s) => !s.disabled).toList();
 
@@ -164,9 +187,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     return ZenScaffold(
       body: CustomScrollView(
         slivers: [
-          const ZenSliverAppBar(
+          ZenSliverAppBar(
             title: '搜索',
-            subtitle: '探索海量影视资源',
+            subtitle: widget.lockedSite != null
+                ? '仅搜索 ${widget.lockedSite!.name}'
+                : '探索海量影视资源',
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -190,27 +215,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ),
                     ),
                     const Spacer(),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '聚合',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.secondary,
-                            fontWeight: FontWeight.bold,
+                    // 锁定源时隐藏聚合开关（单源无需聚合）
+                    if (widget.lockedSite == null)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '聚合',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.secondary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Transform.scale(
-                          scale: 0.8,
-                          child: ZenSwitch(
-                            value: isAggregate,
-                            onChanged: (val) => ref.read(aggregateSearchProvider.notifier).setEnabled(val),
+                          const SizedBox(width: 4),
+                          Transform.scale(
+                            scale: 0.8,
+                            child: ZenSwitch(
+                              value: isAggregate,
+                              onChanged: (val) => ref.read(aggregateSearchProvider.notifier).setEnabled(val),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                   ],
                 ),
               ),

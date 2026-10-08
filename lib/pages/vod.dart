@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../models/movie.dart';
 import '../models/site.dart';
 import '../services/cms_service.dart';
 import '../services/config_service.dart';
 import '../widgets/cover_image.dart';
+import 'search.dart';
 import 'video_detail.dart';
 
 /// 发现版 · 影视页
@@ -146,7 +148,11 @@ class _VodPageState extends ConsumerState<VodPage> {
       description: video.desc,
     );
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => VideoDetailPage(subject: subject, initialVideo: video),
+      builder: (_) => VideoDetailPage(
+        subject: subject,
+        initialVideo: video,
+        lockedSite: _site,
+      ),
     ));
   }
 
@@ -157,6 +163,19 @@ class _VodPageState extends ConsumerState<VodPage> {
       appBar: AppBar(
         title: const Text('影视'),
         centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.search),
+            tooltip: '搜索当前源',
+            onPressed: _site == null
+                ? null
+                : () {
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => SearchPage(lockedSite: _site),
+                    ));
+                  },
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
