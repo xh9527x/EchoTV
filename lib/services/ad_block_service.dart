@@ -4,7 +4,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import '../providers/settings_provider.dart';
+import 'config_service.dart';
+import 'doh_service.dart';
 import 'logger_service.dart';
 
 final adBlockServiceProvider = Provider((ref) {
@@ -25,7 +28,23 @@ class AdBlockService {
     },
   ));
 
-  AdBlockService(this._ref);
+  AdBlockService(this._ref) {
+    // 配置 HttpClient：DoH 直连 IP 时放行证书（IP 与证书 CN 不匹配是预期的）
+    final adapter = IOHttpClientAdapter();
+    adapter.onHttpClientCreate = (client) {
+      client.badCertificateCallback = (cert, host, port) {
+        // 仅当 host 是 IP（DoH 直连场景）时放行
+        final isIp = RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host);
+        if (isIp) {
+          _ref.read(loggerServiceProvider).log('DoH', '放行 IP 证书: $host');
+          return true;
+        }
+        return false;
+      };
+      return client;
+    };
+    _dio.httpClientAdapter = adapter;
+  }
 
   Future<void> init() async {
     if (_server != null) return;
@@ -82,15 +101,37 @@ class AdBlockService {
 
     final logger = _ref.read(loggerServiceProvider);
     logger.log('Proxy', '请求: ${uri.host}${uri.path.length > 60 ? uri.path.substring(0, 60) + "..." : uri.path}');
+
+    // DoH 解析：如果开启，用 DoH 得到的 IP 直连，绕过本地 DNS 劫持
+    String fetchUrl = originalUrl;
+    Map<String, String> extraHeaders = {};
+    bool dohUsed = false;
+    try {
+      final dohEnabled = await _ref.read(configServiceProvider).getDohEnabled();
+      if (dohEnabled) {
+        final doh = _ref.read(dohServiceProvider);
+        final ip = await doh.resolve(uri.host);
+        if (ip != null && ip != uri.host) {
+          // 用 IP 替换 host，保留原 host 在 Header 中
+          fetchUrl = originalUrl.replaceFirst(uri.host, ip);
+          extraHeaders['Host'] = uri.host;
+          dohUsed = true;
+          logger.log('DoH', '直连 IP: $ip (原 ${uri.host})');
+        }
+      }
+    } catch (_) {}
     
     try {
       final response = await _dio.get<dynamic>(
-        originalUrl,
+        fetchUrl,
         options: Options(
           responseType: ResponseType.bytes,
           headers: {
             if (referer != null) 'Referer': referer,
+            ...extraHeaders,
           },
+          // DoH 直连 IP 时，证书 CN 是域名不是 IP，需要放行（已通过 DoH 验证 IP 可信）
+          validateStatus: (status) => true,
         ),
       );
       

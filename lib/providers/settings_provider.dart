@@ -192,3 +192,47 @@ class UiLayoutModel extends Notifier<String> {
     await configService.setUiLayout(layout);
   }
 }
+
+/// DoH 安全解析开关
+final dohEnabledProvider = NotifierProvider<DohEnabledModel, bool>(DohEnabledModel.new);
+
+class DohEnabledModel extends Notifier<bool> {
+  @override
+  bool build() {
+    _load();
+    return false;
+  }
+
+  Future<void> _load() async {
+    final configService = ref.read(configServiceProvider);
+    state = await configService.getDohEnabled();
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    final configService = ref.read(configServiceProvider);
+    await configService.setDohEnabled(enabled);
+  }
+}
+
+/// DoH 服务器 URL（空字符串表示用默认 Cloudflare）
+final dohServerProvider = NotifierProvider<DohServerModel, String>(DohServerModel.new);
+
+class DohServerModel extends Notifier<String> {
+  @override
+  String build() {
+    _load();
+    return '';
+  }
+
+  Future<void> _load() async {
+    final configService = ref.read(configServiceProvider);
+    state = await configService.getDohServer();
+  }
+
+  Future<void> setServer(String url) async {
+    state = url;
+    final configService = ref.read(configServiceProvider);
+    await configService.setDohServer(url);
+  }
+}

@@ -35,6 +35,8 @@ class ConfigService {
   static const String keyAdBlockEnabled = 'enable_blockad';
   static const String keyAdBlockKeywords = 'ad_block_keywords';
   static const String keyAdBlockWhitelist = 'ad_block_whitelist';
+  static const String keyDohEnabled = 'doh_enabled';
+  static const String keyDohServer = 'doh_server';
 
   static const List<String> defaultAdKeywords = [
     'ads', 'union', 'click', 'p6p', 'pop', 'short.mp4', 'advert', 'adv.', 
@@ -74,6 +76,26 @@ class ConfigService {
   Future<void> setAdBlockEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(keyAdBlockEnabled, enabled);
+  }
+
+  Future<bool> getDohEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(keyDohEnabled) ?? false;
+  }
+
+  Future<void> setDohEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(keyDohEnabled, enabled);
+  }
+
+  Future<String> getDohServer() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyDohServer) ?? '';
+  }
+
+  Future<void> setDohServer(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyDohServer, url);
   }
 
   Future<bool> getHasAgreedTerms() async {

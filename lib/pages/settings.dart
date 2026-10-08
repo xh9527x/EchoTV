@@ -16,6 +16,7 @@ import 'category_manage.dart';
 import 'live_manage.dart';
 import 'log_viewer.dart';
 import 'subscription_manage.dart';
+import '../services/doh_service.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -163,6 +164,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                 ]),
 
+                _buildSectionTitle('网络与解析'),
+                _buildSettingGroup([
+                  _buildSwitchItem(
+                    icon: LucideIcons.shieldCheck,
+                    title: 'DoH 安全解析',
+                    subtitle: '绕过本地 DNS 劫持，解析视频源域名',
+                    value: ref.watch(dohEnabledProvider),
+                    onChanged: (val) => ref.read(dohEnabledProvider.notifier).setEnabled(val),
+                  ),
+                  _buildNavigationItem(
+                    icon: LucideIcons.server,
+                    title: 'DoH 服务器',
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getDohServerLabel(ref.watch(dohServerProvider)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.secondary, fontSize: 13),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(LucideIcons.chevronRight, size: 14, color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5)),
+                      ],
+                    ),
+                    onTap: _showDohServerPicker,
+                    showDivider: false,
+                  ),
+                ]),
+
                 _buildSectionTitle('高级设置'),
                 _buildSettingGroup([
                   _buildNavigationItem(
@@ -242,6 +271,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     Key? key,
     required IconData icon,
     required String title,
+    String? subtitle,
     Widget? trailing,
     VoidCallback? onTap,
     bool showDivider = true,
@@ -262,9 +292,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   if (trailing != null) trailing,
@@ -301,10 +346,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildSwitchItem({required IconData icon, required String title, required bool value, required Function(bool) onChanged, bool showDivider = true}) {
+  Widget _buildSwitchItem({required IconData icon, required String title, String? subtitle, required bool value, required Function(bool) onChanged, bool showDivider = true}) {
     return _buildBaseItem(
       icon: icon,
       title: title,
+      subtitle: subtitle,
       showDivider: showDivider,
       trailing: ZenSwitch(
         value: value,
@@ -365,6 +411,96 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }, ref.read(uiLayoutProvider), (val) {
       ref.read(uiLayoutProvider.notifier).setLayout(val as String);
     });
+  }
+
+  String _getDohServerLabel(String url) {
+    if (url.isEmpty) return '1.1.1.1/dns-query';
+    for (final s in DohServer.presets) {
+      if (s.url == url) return s.url.replaceFirst('https://', '');
+    }
+    // 自定义：显示 host 部分
+    try {
+      return Uri.parse(url).host;
+    } catch (_) {
+      return url;
+    }
+  }
+
+  void _showDohServerPicker() {
+    final current = ref.read(dohServerProvider);
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('DoH 服务器', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 16),
+            ...DohServer.presets.map((s) {
+              final selected = (current.isEmpty && s.url == DohServer.presets[0].url) || current == s.url;
+              return ListTile(
+                title: Text(s.name),
+                subtitle: Text(s.url.replaceFirst('https://', ''), style: const TextStyle(fontSize: 12)),
+                trailing: selected ? Icon(LucideIcons.check, color: theme.colorScheme.primary) : null,
+                onTap: () {
+                  ref.read(dohServerProvider.notifier).setServer(s.url);
+                  Navigator.pop(context);
+                },
+              );
+            }),
+            ListTile(
+              title: const Text('自定义...'),
+              trailing: const Icon(LucideIcons.chevronRight, size: 16),
+              onTap: () {
+                Navigator.pop(context);
+                _showDohCustomInput();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDohCustomInput() {
+    final controller = TextEditingController(text: ref.read(dohServerProvider));
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('自定义 DoH 服务器'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'https://example.com/dns-query',
+            labelText: 'DoH URL',
+          ),
+          keyboardType: TextInputType.url,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              final url = controller.text.trim();
+              if (url.isNotEmpty) {
+                ref.read(dohServerProvider.notifier).setServer(url);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getProxyLabel(String val) {
