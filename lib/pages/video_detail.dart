@@ -17,8 +17,9 @@ import '../widgets/video_player.dart';
 
 class VideoDetailPage extends ConsumerStatefulWidget {
   final DoubanSubject subject;
+  final VideoDetail? initialVideo;
 
-  const VideoDetailPage({super.key, required this.subject});
+  const VideoDetailPage({super.key, required this.subject, this.initialVideo});
 
   @override
   ConsumerState<VideoDetailPage> createState() => _VideoDetailPageState();
@@ -155,6 +156,24 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
       });
     } else {
       setState(() => _isDetailLoading = false);
+    }
+
+    // 影视页直通：调用方已给出具体视频，跳过全源标题重搜，直接进入优选播放
+    if (widget.initialVideo != null) {
+      final video = widget.initialVideo!;
+      if (mounted) {
+        setState(() {
+          _availableSources.add(video);
+          _isSearching = false;
+          _noSitesConfigured = false;
+        });
+        if (!_hasTriggeredInitialInit) {
+          _hasTriggeredInitialInit = true;
+          _startDynamicInitialization();
+        }
+        _optimizeBestSource([video]);
+      }
+      return;
     }
 
     final sites = await configService.getSites();

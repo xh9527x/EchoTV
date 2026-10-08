@@ -85,6 +85,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 _buildSectionTitle('外观与偏好'),
                 _buildSettingGroup([
                   _buildSelectionItem(
+                    icon: LucideIcons.layoutDashboard,
+                    title: '界面布局',
+                    value: _getUiLayoutLabel(ref.watch(uiLayoutProvider)),
+                    onTap: () => _showUiLayoutPicker(),
+                  ),
+                  _buildSelectionItem(
                     icon: LucideIcons.palette,
                     title: '主题模式',
                     value: _getThemeModeLabel(ref.watch(themeModelProvider)),
@@ -336,6 +342,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       case ThemeMode.light: return '浅色';
       case ThemeMode.dark: return '深色';
     }
+  }
+
+  String _getUiLayoutLabel(String layout) {
+    return layout == 'discovery' ? '发现版' : '经典版';
+  }
+
+  void _showUiLayoutPicker() {
+    _showSimplePicker('选择界面布局', {
+      'classic': '经典版',
+      'discovery': '发现版',
+    }, ref.read(uiLayoutProvider), (val) {
+      ref.read(uiLayoutProvider.notifier).setLayout(val as String);
+    });
   }
 
   String _getProxyLabel(String val) {
