@@ -163,13 +163,12 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
       setState(() => _isDetailLoading = false);
     }
 
-    // 影视页直通：调用方已给出具体视频，跳过全源标题重搜，直接进入优选播放
+    // 影视页直通：调用方已给出具体视频，先加入候选
     if (widget.initialVideo != null) {
       final video = widget.initialVideo!;
       if (mounted) {
         setState(() {
           _availableSources.add(video);
-          _isSearching = false;
           _noSitesConfigured = false;
         });
         if (!_hasTriggeredInitialInit) {
@@ -178,7 +177,12 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
         }
         _optimizeBestSource([video]);
       }
-      return;
+      // 锁定源时：只用该视频，不再全源搜索
+      if (widget.lockedSite != null) {
+        setState(() => _isSearching = false);
+        return;
+      }
+      // 非锁定时：继续往下做全源聚合搜索（initialVideo 作为首个候选）
     }
 
     final sites = await configService.getSites();
