@@ -62,9 +62,11 @@ class ZenSwitch extends StatelessWidget {
         child: Switch(
           value: value,
           onChanged: onChanged,
-        activeThumbColor: theme.colorScheme.onPrimary,
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return theme.colorScheme.onPrimary;
+          return isDark ? Colors.white38 : Colors.white;
+        }),
         activeTrackColor: activeTrackColor ?? theme.colorScheme.primary,
-        inactiveThumbColor: isDark ? Colors.white38 : Colors.white,
         inactiveTrackColor: isDark ? Colors.white12 : Colors.black12,
         trackOutlineColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return Colors.transparent;

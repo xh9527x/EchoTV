@@ -1,39 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
+import '../providers/settings_provider.dart';
 
-class MainLayout extends StatelessWidget {
+class MainLayout extends ConsumerWidget {
   final Widget child;
   final String currentPath;
 
   const MainLayout({super.key, required this.child, required this.currentPath});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDiscovery = ref.watch(uiLayoutProvider) == 'discovery';
     
     return LayoutBuilder(
       builder: (context, constraints) {
         final isPC = constraints.maxWidth > 800;
 
-        final coreNavItems = [
-          {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
-          {'path': '/movies', 'label': '电影', 'icon': LucideIcons.film},
-          {'path': '/series', 'label': '剧集', 'icon': LucideIcons.clapperboard},
-          {'path': '/anime', 'label': '动漫', 'icon': LucideIcons.ghost},
-          {'path': '/variety', 'label': '综艺', 'icon': LucideIcons.sparkles},
-          {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
-        ];
+        final coreNavItems = isDiscovery
+            ? [
+                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
+                {'path': '/vod', 'label': '影视', 'icon': LucideIcons.film},
+                {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
+              ]
+            : [
+                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
+                {'path': '/movies', 'label': '电影', 'icon': LucideIcons.film},
+                {'path': '/series', 'label': '剧集', 'icon': LucideIcons.clapperboard},
+                {'path': '/anime', 'label': '动漫', 'icon': LucideIcons.ghost},
+                {'path': '/variety', 'label': '综艺', 'icon': LucideIcons.sparkles},
+                {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
+              ];
 
-        final pcNavItems = [
-          {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
-          {'path': '/search', 'label': '搜索', 'icon': LucideIcons.search},
-          {'path': '/movies', 'label': '电影', 'icon': LucideIcons.film},
-          {'path': '/series', 'label': '剧集', 'icon': LucideIcons.clapperboard},
-          {'path': '/anime', 'label': '动漫', 'icon': LucideIcons.ghost},
-          {'path': '/variety', 'label': '综艺', 'icon': LucideIcons.sparkles},
-          {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
-        ];
+        final pcNavItems = isDiscovery
+            ? [
+                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
+                {'path': '/vod', 'label': '影视', 'icon': LucideIcons.film},
+                {'path': '/search', 'label': '搜索', 'icon': LucideIcons.search},
+                {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
+              ]
+            : [
+                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
+                {'path': '/search', 'label': '搜索', 'icon': LucideIcons.search},
+                {'path': '/movies', 'label': '电影', 'icon': LucideIcons.film},
+                {'path': '/series', 'label': '剧集', 'icon': LucideIcons.clapperboard},
+                {'path': '/anime', 'label': '动漫', 'icon': LucideIcons.ghost},
+                {'path': '/variety', 'label': '综艺', 'icon': LucideIcons.sparkles},
+                {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
+              ];
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
