@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../providers/settings_provider.dart';
+import 'logger_service.dart';
 
 final adBlockServiceProvider = Provider((ref) {
   final service = AdBlockService(ref);
@@ -78,6 +79,9 @@ class AdBlockService {
     final String originalUrl = utf8.decode(base64Url.decode(encodedUrl));
     final String? referer = encodedReferer != null ? utf8.decode(base64Url.decode(encodedReferer)) : null;
     final uri = Uri.parse(originalUrl);
+
+    final logger = _ref.read(loggerServiceProvider);
+    logger.log('Proxy', '请求: ${uri.host}${uri.path.length > 60 ? uri.path.substring(0, 60) + "..." : uri.path}');
     
     try {
       final response = await _dio.get<dynamic>(
@@ -92,6 +96,7 @@ class AdBlockService {
       
       final List<int> bytes = response.data ?? [];
       request.response.statusCode = response.statusCode ?? HttpStatus.ok;
+      logger.log('Proxy', '响应: ${response.statusCode}, ${bytes.length} bytes');
 
       // 透传所有源站返回的 headers (排除敏感的)
       response.headers.forEach((name, values) {
@@ -123,6 +128,7 @@ class AdBlockService {
         request.response.add(bytes);
       }
     } catch (e) {
+      logger.log('Proxy', '请求失败：$e URL: ${originalUrl.length > 120 ? originalUrl.substring(0, 120) + "..." : originalUrl}');
       debugPrint('❌ AdBlock Proxy Fetch Error: $e URL: $originalUrl');
       try {
         request.response.statusCode = HttpStatus.badGateway;

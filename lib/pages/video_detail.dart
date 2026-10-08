@@ -11,6 +11,7 @@ import '../services/config_service.dart';
 import '../providers/history_provider.dart';
 import '../services/video_quality_service.dart';
 import '../services/source_optimizer_service.dart';
+import '../services/logger_service.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/zen_ui.dart';
 import '../widgets/video_player.dart';
@@ -308,6 +309,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                           _qualityInfoMap[key] = quality;
                           _testedSources.add(key);
                         });
+                        ref.read(loggerServiceProvider).log('Detail', '测速 ${source.sourceName}: ${quality.loadSpeed}, ${quality.pingTime}ms${quality.hasError ? " [失败]" : ""}');
                         // 移除 _applyIncrementalOptimization()，不再自动纠偏
                       }        } catch (e) {}
       }
@@ -341,6 +343,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
   }
 
   Future<void> _switchSource(VideoDetail newSource) async {
+    ref.read(loggerServiceProvider).log('Detail', '切换源站: ${newSource.sourceName} (${newSource.source})');
     setState(() {
       _currentSource = newSource;
     });

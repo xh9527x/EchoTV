@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
+import '../services/logger_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/site.dart';
 import '../services/ad_block_service.dart';
@@ -103,6 +104,14 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
           ? ref.read(adBlockServiceProvider).getProxyUrl(widget.url, referer: widget.referer)
           : widget.url;
 
+      // 日志：记录播放 URL（脱敏：只保留 host 和路径前 80 字符）
+      final logger = ref.read(loggerServiceProvider);
+      logger.log('Player', '原始URL: ${_shortUrl(widget.url)}');
+      logger.log('Player', '代理${(!widget.isLive && isAdBlockEnabled && isM3u8) ? "开启" : "关闭"}，播放URL: ${_shortUrl(playUrl)}');
+      if (widget.referer != null && widget.referer!.isNotEmpty) {
+        logger.log('Player', 'Referer: ${widget.referer}');
+      }
+
       // 3. 判定是否给播放器 HLS 格式提示
       bool useHlsHint = isM3u8;
       if (widget.isLive && !isM3u8) {
@@ -122,7 +131,16 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
       );
       
       _videoController = controller;
-      await controller.initialize();
+      try {
+        await controller.initialize();
+        logger.log('Player', '播放器初始化成功，duration=${controller.value.duration}');
+      } catch (e) {
+        logger.log('Player', '播放器初始化失败：$e');
+        if (mounted) {
+          setState(() => _errorMessage = '播放器初始化失败：$e');
+        }
+        return;
+      }
       if (_isDisposed) return;
 
       // 如果有初始进度，计算跳转位置
@@ -187,6 +205,18 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
     }
   }
 
+  /// URL 脱敏：保留 host，路径只显示前 80 字符，避免日志过长
+  String _shortUrl(String url) {
+    try {
+      final uri = Uri.parse(url);
+      var path = uri.path;
+      if (path.length > 80) path = '${path.substring(0, 80)}...';
+      return '${uri.host}$path';
+    } catch (_) {
+      return url.length > 100 ? '${url.substring(0, 100)}...' : url;
+    }
+  }
+
   void _videoListener() {
     if (_videoController == null || _isDisposed) return;
     
@@ -196,6 +226,7 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
     if (value.isInitialized && value.isBuffering && !_isInitializing) {
       _bufferingTimer ??= Timer(const Duration(seconds: 15), () { // 点播宽限到 15s
         if (mounted && _videoController!.value.isBuffering) {
+          ref.read(loggerServiceProvider).log('Player', '错误：缓冲超时 15s，url=${_shortUrl(widget.url)}');
           setState(() {
             _errorMessage = '网络连接不稳定或资源加载失败';
           });
@@ -209,6 +240,7 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
     // 监听视频尺寸异常（通用逻辑：初始化完成但无有效画面数据）
     if (value.isInitialized && !value.isBuffering && value.size.width == 0) {
       // 排除掉纯音频流的情况（如果业务不需要显示纯音频，这里统一视为源异常）
+      ref.read(loggerServiceProvider).log('Player', '错误：无视频画面（size=0），url=${_shortUrl(widget.url)}');
       setState(() {
         _errorMessage = '无法解析视频画面，请尝试切换线路';
       });

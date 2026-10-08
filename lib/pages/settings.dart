@@ -14,6 +14,7 @@ import '../widgets/edit_dialog.dart';
 import 'source_manage.dart';
 import 'category_manage.dart';
 import 'live_manage.dart';
+import 'log_viewer.dart';
 import 'subscription_manage.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -164,6 +165,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
                 _buildSectionTitle('高级设置'),
                 _buildSettingGroup([
+                  _buildNavigationItem(
+                    icon: LucideIcons.fileText,
+                    title: '运行日志',
+                    onTap: () {
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const LogViewerPage(),
+                      ));
+                    },
+                  ),
                   _buildActionItem(
                     icon: LucideIcons.trash2,
                     title: '清除所有数据并重置',
