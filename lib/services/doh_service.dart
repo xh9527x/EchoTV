@@ -15,18 +15,18 @@ class DohServer {
   const DohServer(this.name, this.url);
 
   static const List<DohServer> presets = [
-    DohServer('Cloudflare', 'https://1.1.1.1/dns-query'),
-    DohServer('Google', 'https://8.8.8.8/dns-query'),
     DohServer('阿里', 'https://dns.alidns.com/dns-query'),
     DohServer('腾讯', 'https://doh.pub/dns-query'),
+    DohServer('Cloudflare', 'https://1.1.1.1/dns-query'),
+    DohServer('Google', 'https://8.8.8.8/dns-query'),
   ];
 }
 
 class DohService {
   final Ref _ref;
   final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 8),
+    connectTimeout: const Duration(seconds: 3),
+    receiveTimeout: const Duration(seconds: 3),
     headers: {'Accept': 'application/dns-json'},
   ));
 

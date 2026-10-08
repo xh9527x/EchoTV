@@ -414,7 +414,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   String _getDohServerLabel(String url) {
-    if (url.isEmpty) return '1.1.1.1/dns-query';
+    if (url.isEmpty) return 'dns.alidns.com/dns-query';
     for (final s in DohServer.presets) {
       if (s.url == url) return s.url.replaceFirst('https://', '');
     }
@@ -432,7 +432,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
         padding: const EdgeInsets.symmetric(vertical: 24),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
@@ -443,25 +447,32 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           children: [
             const Text('DoH 服务器', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
             const SizedBox(height: 16),
-            ...DohServer.presets.map((s) {
-              final selected = (current.isEmpty && s.url == DohServer.presets[0].url) || current == s.url;
-              return ListTile(
-                title: Text(s.name),
-                subtitle: Text(s.url.replaceFirst('https://', ''), style: const TextStyle(fontSize: 12)),
-                trailing: selected ? Icon(LucideIcons.check, color: theme.colorScheme.primary) : null,
-                onTap: () {
-                  ref.read(dohServerProvider.notifier).setServer(s.url);
-                  Navigator.pop(context);
-                },
-              );
-            }),
-            ListTile(
-              title: const Text('自定义...'),
-              trailing: const Icon(LucideIcons.chevronRight, size: 16),
-              onTap: () {
-                Navigator.pop(context);
-                _showDohCustomInput();
-              },
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  ...DohServer.presets.map((s) {
+                    final selected = (current.isEmpty && s.url == DohServer.presets[0].url) || current == s.url;
+                    return ListTile(
+                      title: Text(s.name),
+                      subtitle: Text(s.url.replaceFirst('https://', ''), style: const TextStyle(fontSize: 12)),
+                      trailing: selected ? Icon(LucideIcons.check, color: theme.colorScheme.primary) : null,
+                      onTap: () {
+                        ref.read(dohServerProvider.notifier).setServer(s.url);
+                        Navigator.pop(context);
+                      },
+                    );
+                  }),
+                  ListTile(
+                    title: const Text('自定义...'),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 16),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showDohCustomInput();
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
