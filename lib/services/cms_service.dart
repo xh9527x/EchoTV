@@ -7,6 +7,27 @@ import '../providers/settings_provider.dart';
 
 final cmsServiceProvider = Provider((ref) => CmsService(ref));
 
+/// CMS 源的分类（来自 `?ac=list` 的 class 数组）
+class CmsCategory {
+  final String id;
+  final String name;
+  const CmsCategory({required this.id, required this.name});
+}
+
+/// 视频列表分页结果
+class VodListResult {
+  final List<VideoDetail> videos;
+  final int page;
+  final int pageCount;
+  final int total;
+  const VodListResult({
+    required this.videos,
+    required this.page,
+    required this.pageCount,
+    required this.total,
+  });
+}
+
 class CmsService {
   final Ref _ref;
   final Dio _dio = Dio(BaseOptions(
@@ -43,54 +64,8 @@ class CmsService {
         return [];
       }
 
-      // 兼容性处理：list 字段可能是数组或字符串
-      final listData = data['list'];
-      if (listData == null) {
-        return [];
-      }
-
-      // 如果 list 是字符串，尝试解析为 JSON
-      List list;
-      if (listData is String) {
-        try {
-          final decoded = jsonDecode(listData);
-          if (decoded is List) {
-            list = decoded;
-          } else {
-            return [];
-          }
-        } catch (e) {
-          return [];
-        }
-      } else if (listData is List) {
-        list = listData;
-      } else {
-        return [];
-      }
-
-      final List<VideoDetail> results = [];
-      final isTeenageMode = _ref.read(teenageModeProvider);
-      final filteredKeywords = _ref.read(filteredKeywordsProvider);
-
-      for (var item in list) {
-        try {
-          final detail = _parseVideoItem(item, site);
-          if (detail.playGroups.isNotEmpty) {
-            bool shouldFilter = false;
-            if (isTeenageMode) {
-              final content = '${detail.title}${detail.typeName ?? ''}${detail.sourceName}'.toLowerCase();
-              if (filteredKeywords.any((kw) => content.contains(kw.toLowerCase()))) {
-                shouldFilter = true;
-              }
-            }
-            if (!shouldFilter) {
-              results.add(detail);
-            }
-          }
-        } catch (e) {
-          // Skip invalid items
-        }
-      }
+      // 兼容性处理：list 字段可能是数组或字符串，统一解析
+      final List<VideoDetail> results = _parseVideoList(data['list'], site);
 
       // 第一页请求成功后，如果是搜索且有多页，全并发抓取后续页
       if (page == 1) {
@@ -210,28 +185,136 @@ class CmsService {
         return null;
       }
 
-      // 兼容性处理：list 字段可能是数组或字符串
-      final listData = data['list'];
-      if (listData == null) return null;
-
-      List list;
-      if (listData is String) {
-        try {
-          list = jsonDecode(listData) as List;
-        } catch (e) {
-          return null;
-        }
-      } else if (listData is List) {
-        list = listData;
-      } else {
-        return null;
-      }
-
+      final list = _parseVideoList(data['list'], site);
       if (list.isEmpty) return null;
 
-      return _parseVideoItem(list[0], site);
+      return list[0];
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Web 平台兼容：把 response.data 统一成 Map
+  Map<String, dynamic>? _asMap(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is String) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        return null;
+      } catch (e) {
+        return null;
+      }
+    } else if (raw is Map) {
+      return Map<String, dynamic>.from(raw);
+    }
+    return null;
+  }
+
+  /// 统一解析 list 字段（数组或 JSON 字符串），过滤无播放源/青少年模式条目
+  List<VideoDetail> _parseVideoList(dynamic listData, SiteConfig site) {
+    if (listData == null) return [];
+
+    List list;
+    if (listData is String) {
+      try {
+        final decoded = jsonDecode(listData);
+        if (decoded is List) {
+          list = decoded;
+        } else {
+          return [];
+        }
+      } catch (e) {
+        return [];
+      }
+    } else if (listData is List) {
+      list = listData;
+    } else {
+      return [];
+    }
+
+    final List<VideoDetail> results = [];
+    final isTeenageMode = _ref.read(teenageModeProvider);
+    final filteredKeywords = _ref.read(filteredKeywordsProvider);
+
+    for (var item in list) {
+      try {
+        final detail = _parseVideoItem(item, site);
+        if (detail.playGroups.isNotEmpty) {
+          bool shouldFilter = false;
+          if (isTeenageMode) {
+            final content = '${detail.title}${detail.typeName ?? ''}${detail.sourceName}'.toLowerCase();
+            if (filteredKeywords.any((kw) => content.contains(kw.toLowerCase()))) {
+              shouldFilter = true;
+            }
+          }
+          if (!shouldFilter) {
+            results.add(detail);
+          }
+        }
+      } catch (e) {
+        // Skip invalid items
+      }
+    }
+    return results;
+  }
+
+  /// 获取指定源的 CMS 分类（`?ac=list` 的 class 数组）
+  Future<List<CmsCategory>> getCategories(SiteConfig site) async {
+    try {
+      final url = '${site.api}?ac=list';
+      final response = await _dio.get(url);
+      final data = _asMap(response.data);
+      if (data == null) return [];
+
+      final classData = data['class'];
+      if (classData is! List) return [];
+
+      return classData
+          .whereType<Map>()
+          .map((e) => CmsCategory(
+                id: (e['type_id'] ?? '').toString(),
+                name: (e['type_name'] ?? '').toString(),
+              ))
+          .where((c) => c.id.isNotEmpty && c.name.isNotEmpty)
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 按源 + 分类分页拉取视频列表；typeId 为空表示全部（最新）
+  Future<VodListResult> getVodList(SiteConfig site, {String? typeId, int page = 1}) async {
+    try {
+      final t = (typeId != null && typeId.isNotEmpty) ? '&t=$typeId' : '';
+      final url = '${site.api}?ac=videolist$t&pg=$page';
+      final response = await _dio.get(url);
+      final data = _asMap(response.data);
+      if (data == null) {
+        return const VodListResult(videos: [], page: 1, pageCount: 1, total: 0);
+      }
+
+      final videos = _parseVideoList(data['list'], site);
+
+      int pageCount = 1;
+      final pc = data['pagecount'];
+      if (pc is int) {
+        pageCount = pc;
+      } else if (pc is String) {
+        pageCount = int.tryParse(pc) ?? 1;
+      }
+
+      int total = 0;
+      final tt = data['total'];
+      if (tt is int) {
+        total = tt;
+      } else if (tt is String) {
+        total = int.tryParse(tt) ?? 0;
+      }
+
+      return VodListResult(videos: videos, page: page, pageCount: pageCount, total: total);
+    } catch (e) {
+      return VodListResult(videos: const [], page: page, pageCount: 1, total: 0);
     }
   }
 

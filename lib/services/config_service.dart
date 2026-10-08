@@ -19,6 +19,7 @@ class ConfigService {
   static const String keyTeenageMode = 'teenage_mode';
   static const String keyFilteredKeywords = 'filtered_keywords';
   static const String keySiteName = 'site_name';
+  static const String keyUiLayout = 'ui_layout'; // classic | discovery
 
   static const List<String> defaultKeywords = [
     '成人', '福利', '伦理', '黄色', '性感', '禁片', '写真', '三级', '情色', 
@@ -222,6 +223,17 @@ class ConfigService {
   Future<void> setThemeMode(ThemeMode mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(keyThemeMode, mode.toString().split('.').last);
+  }
+
+  /// 界面布局：classic（经典版）| discovery（发现版）
+  Future<String> getUiLayout() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyUiLayout) ?? 'classic';
+  }
+
+  Future<void> setUiLayout(String layout) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyUiLayout, layout);
   }
 
   Future<String> getDoubanProxyType() async {

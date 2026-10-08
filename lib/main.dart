@@ -12,6 +12,7 @@ import 'pages/live.dart';
 import 'pages/play.dart';
 import 'pages/settings.dart';
 import 'pages/search.dart';
+import 'pages/vod.dart';
 import 'providers/settings_provider.dart';
 import 'services/ad_block_service.dart';
 import 'services/config_service.dart';
@@ -338,6 +339,13 @@ final _router = GoRouter(
           pageBuilder: (context, state) => _buildPageWithPlatformTransition(
             state,
             const ExplorePage(title: '综艺', type: 'show'),
+          ),
+        ),
+        GoRoute(
+          path: '/vod',
+          pageBuilder: (context, state) => _buildPageWithPlatformTransition(
+            state,
+            const VodPage(),
           ),
         ),
         GoRoute(

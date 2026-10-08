@@ -171,3 +171,24 @@ class AdBlockWhitelistModel extends Notifier<List<String>> {
     await configService.setAdBlockWhitelist(keywords);
   }
 }
+/// 界面布局：classic（经典版）| discovery（发现版）
+final uiLayoutProvider = NotifierProvider<UiLayoutModel, String>(UiLayoutModel.new);
+
+class UiLayoutModel extends Notifier<String> {
+  @override
+  String build() {
+    _load();
+    return 'classic';
+  }
+
+  Future<void> _load() async {
+    final configService = ref.read(configServiceProvider);
+    state = await configService.getUiLayout();
+  }
+
+  Future<void> setLayout(String layout) async {
+    state = layout;
+    final configService = ref.read(configServiceProvider);
+    await configService.setUiLayout(layout);
+  }
+}
