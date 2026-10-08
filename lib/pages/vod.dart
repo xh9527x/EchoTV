@@ -151,7 +151,7 @@ class _VodPageState extends ConsumerState<VodPage> {
       builder: (_) => VideoDetailPage(
         subject: subject,
         initialVideo: video,
-        lockedSite: _site,
+        // 不传 lockedSite：聚合搜索所有源，自动找能播的（应对 CDN 地域封锁）
       ),
     ));
   }
