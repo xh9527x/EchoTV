@@ -32,6 +32,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   bool _isLoading = false;
   bool _isSearching = false;
   bool _noSitesConfigured = false;
+  /// 锁定源时的聚合开关：开=搜全源，关=仅搜锁定源（默认关）
+  bool _lockedAggregate = false;
 
   @override
   void initState() {
@@ -105,9 +107,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final cmsService = ref.read(cmsServiceProvider);
     final configService = ref.read(configServiceProvider);
 
-    // 锁定源：只搜当前源
+    // 锁定源：聚合开关关时只搜当前源，开时搜全源
     final locked = widget.lockedSite;
-    if (locked != null) {
+    if (locked != null && !_lockedAggregate) {
       try {
         final siteResults = await cmsService.search(locked, searchText);
         if (!mounted) return;
@@ -190,7 +192,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ZenSliverAppBar(
             title: '搜索',
             subtitle: widget.lockedSite != null
-                ? '仅搜索 ${widget.lockedSite!.name}'
+                ? (_lockedAggregate ? '聚合搜索全源' : '仅搜索 ${widget.lockedSite!.name}')
                 : '探索海量影视资源',
           ),
           SliverToBoxAdapter(
@@ -215,29 +217,36 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ),
                     ),
                     const Spacer(),
-                    // 锁定源时隐藏聚合开关（单源无需聚合）
-                    if (widget.lockedSite == null)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '聚合',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.secondary,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    // 聚合开关：未锁定时控制结果分组，锁定时控制搜索范围（单源/全源）
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '聚合',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(width: 4),
-                          Transform.scale(
-                            scale: 0.8,
-                            child: ZenSwitch(
-                              value: isAggregate,
-                              onChanged: (val) => ref.read(aggregateSearchProvider.notifier).setEnabled(val),
-                            ),
+                        ),
+                        const SizedBox(width: 4),
+                        Transform.scale(
+                          scale: 0.8,
+                          child: ZenSwitch(
+                            value: widget.lockedSite == null ? isAggregate : _lockedAggregate,
+                            onChanged: (val) {
+                              if (widget.lockedSite == null) {
+                                ref.read(aggregateSearchProvider.notifier).setEnabled(val);
+                              } else {
+                                setState(() => _lockedAggregate = val);
+                                // 切换后重新搜索
+                                if (_controller.text.isNotEmpty) _handleSearch();
+                              }
+                            },
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
