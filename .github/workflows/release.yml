@@ -35,7 +35,7 @@ jobs:
             artifact_ext: ipa
 
           - target: Windows
-            os: windows-latest
+            os: windows-2022
             build_cmd: flutter build windows --release
             artifact_path: build/windows/x64/runner/Release
             artifact_ext: zip
