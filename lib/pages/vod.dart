@@ -360,9 +360,9 @@ class _VodPageState extends ConsumerState<VodPage> {
                               style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 6),
-                            if ((v.typeName ?? '').isNotEmpty || (v.year ?? '').isNotEmpty)
+                            if ((v.typeName ?? '').isNotEmpty || (v.uploadTime ?? '').isNotEmpty)
                               Text(
-                                [v.year, v.typeName].where((e) => (e ?? '').isNotEmpty).join(' · '),
+                                [v.uploadTime, v.typeName].where((e) => (e ?? '').isNotEmpty).join(' · '),
                                 style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
                               ),
                             if ((v.desc ?? '').isNotEmpty) ...[
@@ -420,20 +420,47 @@ class _VodPageState extends ConsumerState<VodPage> {
               );
             }
             final v = _videos[i];
+            // 角标：剧集显示集数，电影显示时长
+            String? badgeText;
+            if ((v.remarks ?? '').isNotEmpty) {
+              badgeText = v.remarks;
+            } else if ((v.duration ?? '').isNotEmpty) {
+              badgeText = v.duration;
+            }
             return GestureDetector(
               onTap: () => _openDetail(v),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: CoverImage(
-                        imageUrl: v.poster,
-                        fit: BoxFit.cover,
-                        // 横图取左半（F方案：书封面类）
-                        alignment: Alignment.centerLeft,
-                      ),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: CoverImage(
+                            imageUrl: v.poster,
+                            fit: BoxFit.cover,
+                            // 横图取左半（F方案：书封面类）
+                            alignment: Alignment.centerLeft,
+                          ),
+                        ),
+                        if (badgeText != null)
+                          Positioned(
+                            right: 6,
+                            bottom: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                badgeText,
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -443,9 +470,9 @@ class _VodPageState extends ConsumerState<VodPage> {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                   ),
-                  if ((v.typeName ?? '').isNotEmpty || (v.year ?? '').isNotEmpty)
+                  if ((v.typeName ?? '').isNotEmpty || (v.uploadTime ?? '').isNotEmpty)
                     Text(
-                      [v.year, v.typeName].where((e) => (e ?? '').isNotEmpty).join(' · '),
+                      [v.uploadTime, v.typeName].where((e) => (e ?? '').isNotEmpty).join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
