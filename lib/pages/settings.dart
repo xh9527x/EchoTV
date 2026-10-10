@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/config_service.dart';
 import '../services/subscription_service.dart';
 import '../services/update_service.dart';
@@ -158,15 +160,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () => _pushPage(const SubscriptionManagePage()),
                   ),
                   _buildActionItem(
+                    icon: LucideIcons.clipboard,
+                    title: '从剪贴板导入',
+                    onTap: _showJsonImport,
+                  ),
+                  _buildActionItem(
                     icon: LucideIcons.fileJson,
                     title: '从 JSON 导入',
-                    onTap: _showJsonImport,
+                    onTap: _importJsonFromFile,
+                  ),
+                  _buildActionItem(
+                    icon: LucideIcons.clipboard,
+                    title: '导出到剪贴板',
+                    onTap: _exportConfig,
                   ),
                   _buildActionItem(
                     icon: LucideIcons.share,
                     title: '导出完整配置',
                     showDivider: false,
-                    onTap: _exportConfig,
+                    onTap: _exportConfigToFile,
                   ),
                 ]),
 
@@ -940,11 +952,62 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
+  /// 从 JSON 文件导入
+  void _importJsonFromFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      String? jsonStr;
+      if (file.bytes != null) {
+        jsonStr = String.fromCharCodes(file.bytes!);
+      } else if (file.path != null) {
+        jsonStr = await File(file.path!).readAsString();
+      }
+      if (jsonStr == null || jsonStr.isEmpty) return;
+      final json = jsonDecode(jsonStr);
+      await SubscriptionService(ref.read(configServiceProvider)).importFromJson(json);
+      _loadSettings();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('导入成功'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败：$e'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+  }
+
   void _exportConfig() async {
     final config = await ref.read(configServiceProvider).exportAll();
     await Clipboard.setData(ClipboardData(text: config));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('配置已复制到剪贴板'), behavior: SnackBarBehavior.floating));
+    }
+  }
+
+  /// 导出完整配置为 JSON 文件（echotv-YYYYMMDDHHmm.json），调起系统分享
+  void _exportConfigToFile() async {
+    try {
+      final config = await ref.read(configServiceProvider).exportAll();
+      final now = DateTime.now();
+      final name = 'echotv-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}'
+          '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}.json';
+      final dir = Directory.systemTemp;
+      final file = File('${dir.path}/$name');
+      await file.writeAsString(config);
+      await Share.shareXFiles([XFile(file.path, name: name, mimeType: 'application/json')], text: 'EchoTV 配置备份');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败：$e'), behavior: SnackBarBehavior.floating));
+      }
     }
   }
 
