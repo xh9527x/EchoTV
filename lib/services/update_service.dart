@@ -6,7 +6,7 @@ import '../widgets/edit_dialog.dart';
 import '../widgets/zen_ui.dart';
 
 class UpdateService {
-  static const String githubRepo = 'hoowhoami/EchoTV';
+  static const String githubRepo = 'xh9527x/EchoTV';
   static const String releaseUrl = 'https://github.com/$githubRepo/releases/latest';
   static const String apiUrl = 'https://api.github.com/repos/$githubRepo/releases/latest';
 

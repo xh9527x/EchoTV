@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/config_service.dart';
@@ -233,8 +234,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: _showDisclaimer,
                   ),
                   _buildNavigationItem(
-                    icon: LucideIcons.info,
-                    title: '关于 EchoTV',
+                    icon: LucideIcons.refreshCw,
+                    title: '检查更新',
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -243,8 +244,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         Icon(LucideIcons.chevronRight, size: 14, color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5)),
                       ],
                     ),
-                    showDivider: false,
                     onTap: () => UpdateService.checkUpdate(context, showNoUpdate: true),
+                  ),
+                  _buildNavigationItem(
+                    icon: LucideIcons.info,
+                    title: '关于',
+                    showDivider: false,
+                    onTap: () => context.push('/about'),
                   ),
                 ]),
 

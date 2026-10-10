@@ -13,6 +13,7 @@ import 'pages/play.dart';
 import 'pages/settings.dart';
 import 'pages/history.dart';
 import 'pages/favorites.dart';
+import 'pages/about.dart';
 import 'pages/search.dart';
 import 'pages/vod.dart';
 import 'providers/settings_provider.dart';
@@ -362,6 +363,13 @@ final _router = GoRouter(
           pageBuilder: (context, state) => _buildPageWithPlatformTransition(
             state,
             const SearchPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/about',
+          pageBuilder: (context, state) => _buildPageWithPlatformTransition(
+            state,
+            const AboutPage(),
           ),
         ),
         GoRoute(
