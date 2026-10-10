@@ -512,20 +512,26 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                 ],
               ),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
-                      // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
-                      if (isPC) ...[
-                        const SizedBox(height: 24),
-                        _buildDetailSection(theme, isPC),
-                      ],
-                      const SizedBox(height: 80),
-                    ],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 播放器顶满：放在 Padding 外面，不受 24px 边距限制
+                    _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
+                          if (isPC) ...[
+                            const SizedBox(height: 24),
+                            _buildDetailSection(theme, isPC),
+                          ],
+                          const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
