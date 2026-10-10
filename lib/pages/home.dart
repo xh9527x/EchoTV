@@ -258,34 +258,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             children: [
               Text('继续观看', style: Theme.of(context).textTheme.titleLarge),
               GestureDetector(
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('清空历史'),
-                      content: const Text('确定要清空所有观看记录吗？'),
-                      actions: [
-                        ZenButton(
-                          isSecondary: true,
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('取消'),
-                        ),
-                        ZenButton(
-                          backgroundColor: Colors.redAccent,
-                          onPressed: () {
-                            ref.read(historyProvider.notifier).clearHistory();
-                            Navigator.pop(context);
-                          },
-                          child: const Text('清空'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                onTap: () => context.push('/history'),
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: Text(
-                    '清空',
+                    '查看更多 ›',
                     style: TextStyle(
                       color: theme.colorScheme.secondary.withValues(alpha: 0.6),
                       fontSize: 12,
@@ -343,6 +320,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                 IconButton(
                   onPressed: () => context.push('/search'),
                   icon: const Icon(LucideIcons.search, size: 20),
+                ),
+                IconButton(
+                  onPressed: () => context.push('/favorites'),
+                  icon: const Icon(LucideIcons.heart, size: 20),
                 ),
                 IconButton(
                   onPressed: () => context.push('/settings'),

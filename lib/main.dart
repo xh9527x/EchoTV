@@ -11,6 +11,8 @@ import 'pages/explore.dart';
 import 'pages/live.dart';
 import 'pages/play.dart';
 import 'pages/settings.dart';
+import 'pages/history.dart';
+import 'pages/favorites.dart';
 import 'pages/search.dart';
 import 'pages/vod.dart';
 import 'providers/settings_provider.dart';
@@ -360,6 +362,20 @@ final _router = GoRouter(
           pageBuilder: (context, state) => _buildPageWithPlatformTransition(
             state,
             const SearchPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/favorites',
+          pageBuilder: (context, state) => _buildPageWithPlatformTransition(
+            state,
+            const FavoritesPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/history',
+          pageBuilder: (context, state) => _buildPageWithPlatformTransition(
+            state,
+            const HistoryPage(),
           ),
         ),
         GoRoute(
