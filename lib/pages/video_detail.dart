@@ -249,52 +249,95 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     if (mounted) setState(() => _isSearching = false);
   }
 
-  /// 动态轮询初始化：等待最佳时机启动播放器
+  /// 快速启动：有第一个可用源就立即播放，优选在后台继续
   Future<void> _startDynamicInitialization() async {
+    // 等第一个源出现，最多等 3 秒
     int tick = 0;
-    const int maxTicks = 20; // 约 4 秒
-
-    while (tick < maxTicks) {
-      if (!mounted || _isPlaying) return;
-
-      final bool hasHighQualitySource = _scoreMap.values.any((score) => score >= 90);
-      final bool hasEnoughSamples = _testedSources.length >= 3 || _testedSources.length == _availableSources.length;
-      final bool isSearchDone = !_isSearching;
-
-      if (hasHighQualitySource || (isSearchDone && hasEnoughSamples) || tick >= 15) {
-        break;
-      }
-
+    while (tick < 15 && mounted && !_isPlaying) {
+      if (_availableSources.isNotEmpty) break;
       await Future.delayed(const Duration(milliseconds: 200));
       tick++;
     }
 
     if (mounted && _availableSources.isNotEmpty && !_isPlaying) {
+      // 直接用第一个源播放，不等测速
+      final first = _availableSources.first;
       setState(() {
-        _loadingStage = LoadingStage.preferring;
-        _loadingMessage = '⚡ 正在优选最佳线路...';
+        _currentSource = first;
+        _loadingStage = LoadingStage.fetching;
+        _loadingMessage = '🎬 正在准备播放...';
       });
 
-      final optimizer = ref.read(sourceOptimizerServiceProvider);
-      final result = await optimizer.selectBestSource(_availableSources, cachedQualityInfo: _qualityInfoMap);
-      
-      if (mounted) {
-        VideoDetail best = result.bestSource;
-        setState(() {
-          _currentSource = best;
-          _qualityInfoMap.addAll(result.qualityInfoMap);
-          _scoreMap.addAll(result.scoreMap);
-          _loadingStage = LoadingStage.fetching;
-          _loadingMessage = '🎬 正在准备播放...';
-        });
+      await _fetchFullDetail(first);
+      _loadSkipConfig();
+      _handlePlayAction(_currentEpisodeIndex, resumePosition: _initialResumePosition);
 
-        // 异步抓取更完整的详情（如完整播放列表），不阻塞 UI 但确保播放前数据最新
-        await _fetchFullDetail(best);
-        
-        _loadSkipConfig();
-        _handlePlayAction(_currentEpisodeIndex, resumePosition: _initialResumePosition);
+      // 后台继续优选，找到更好的源时提示切换
+      _backgroundOptimize();
+    }
+  }
+
+  /// 后台优选：不阻塞播放，发现更优线路时提示用户
+  Future<void> _backgroundOptimize() async {
+    // 等测速完成
+    int tick = 0;
+    while (tick < 50 && mounted) {
+      final bool isSearchDone = !_isSearching;
+      final bool hasEnoughSamples = _testedSources.length >= 3 || _testedSources.length == _availableSources.length;
+      if (isSearchDone && hasEnoughSamples) break;
+      await Future.delayed(const Duration(milliseconds: 200));
+      tick++;
+    }
+    if (!mounted || _currentSource == null) return;
+
+    final optimizer = ref.read(sourceOptimizerServiceProvider);
+    final result = await optimizer.selectBestSource(_availableSources, cachedQualityInfo: _qualityInfoMap);
+    if (!mounted) return;
+
+    final best = result.bestSource;
+    final currentKey = '${_currentSource!.source}-${_currentSource!.id}';
+    final bestKey = '${best.source}-${best.id}';
+    // 如果最优源和当前不同，且当前源测速不佳，提示切换
+    if (bestKey != currentKey) {
+      final currentScore = _scoreMap[currentKey] ?? 0;
+      final bestScore = _scoreMap[bestKey] ?? 0;
+      if (bestScore > currentScore + 20) {
+        _showBetterSourceDialog(best);
       }
     }
+  }
+
+  void _showBetterSourceDialog(VideoDetail better) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('发现更优线路'),
+        content: Text('「${better.sourceName}」速度更快，是否切换？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('不了'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _switchToSource(better);
+            },
+            child: const Text('切换'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _switchToSource(VideoDetail source) async {
+    setState(() {
+      _currentSource = source;
+    });
+    await _fetchFullDetail(source);
+    // 保持当前集数，重新加载播放
+    _handlePlayAction(_currentEpisodeIndex);
   }
 
   Future<void> _optimizeBestSource(List<VideoDetail> sources) async {
@@ -512,20 +555,27 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                 ],
               ),
               SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
-                      // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
-                      if (isPC) ...[
-                        const SizedBox(height: 24),
-                        _buildDetailSection(theme, isPC),
-                      ],
-                      const SizedBox(height: 80),
-                    ],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 播放器0间隙：在Padding外面，左右顶满；顶部8px避开导航栏
+                    const SizedBox(height: 8),
+                    _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
+                          if (isPC) ...[
+                            const SizedBox(height: 24),
+                            _buildDetailSection(theme, isPC),
+                          ],
+                          const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -637,14 +687,14 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = isPC ? 48.0 : 8.0;
+    final horizontalPadding = isPC ? 48.0 : 0.0;
     final playerHeight = isPC ? _calculatePlayerHeight(screenWidth) : ((screenWidth - 2 * horizontalPadding) / (16 / 9));
 
     return Container(
       height: playerHeight,
       decoration: BoxDecoration(
         color: Colors.black,
-        borderRadius: BorderRadius.circular(8), 
+        borderRadius: BorderRadius.zero, 
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3), 

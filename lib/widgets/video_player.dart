@@ -59,6 +59,64 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
     WidgetsBinding.instance.addObserver(this);
     WakelockPlus.enable();
     _initializePlayer();
+    // 监听画面比例变化，实时重建控制器
+    ref.listenManual(aspectRatioProvider, (prev, next) {
+      if (prev != next && _videoController != null && !_isDisposed) {
+        _rebuildChewieWithRatio(next);
+      }
+    });
+  }
+
+  /// 仅重建 ChewieController 以应用新比例，保持播放进度
+  Future<void> _rebuildChewieWithRatio(String ratioPref) async {
+    final videoCtrl = _videoController;
+    if (videoCtrl == null || _isDisposed) return;
+    final wasPlaying = videoCtrl.value.isPlaying;
+    final position = videoCtrl.value.position;
+    final oldChewie = _chewieController;
+    _chewieController = null;
+    oldChewie?.dispose();
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (_isDisposed || _videoController != videoCtrl) return;
+    double? targetRatio;
+    if (ratioPref == '4:3') {
+      targetRatio = 4 / 3;
+    } else if (ratioPref == '16:9') {
+      targetRatio = 16 / 9;
+    }
+    final isAdBlockEnabled = ref.read(adBlockEnabledProvider);
+    final volume = ref.read(playerVolumeProvider);
+    _chewieController = ChewieController(
+      videoPlayerController: videoCtrl,
+      autoPlay: wasPlaying,
+      looping: false,
+      startAt: position,
+      aspectRatio: targetRatio ?? videoCtrl.value.aspectRatio,
+      allowFullScreen: true,
+      isLive: widget.isLive,
+      customControls: ZenVideoControls(
+        isAdBlockingEnabled: isAdBlockEnabled,
+        onAdBlockingToggle: () {
+          final currentEnabled = ref.read(adBlockEnabledProvider);
+          ref.read(adBlockEnabledProvider.notifier).setEnabled(!currentEnabled);
+        },
+        skipConfig: widget.skipConfig ?? SkipConfig(),
+        onSkipConfigChange: widget.onSkipConfigChange,
+        initialVolume: volume,
+        onVolumeChanged: (vol) {
+          ref.read(playerVolumeProvider.notifier).setVolume(vol);
+        },
+        hasNextEpisode: widget.hasNextEpisode,
+        onNextEpisode: widget.onNextEpisode,
+      ),
+      materialProgressColors: ChewieProgressColors(
+        playedColor: widget.isLive ? Colors.white : const Color(0xFF0A84FF),
+        handleColor: widget.isLive ? Colors.white : const Color(0xFF0A84FF),
+        bufferedColor: Colors.white.withOpacity(0.3),
+        backgroundColor: Colors.white.withOpacity(0.1),
+      ),
+    );
+    if (mounted) setState(() {});
   }
 
   @override
