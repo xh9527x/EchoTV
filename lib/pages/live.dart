@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/live_service.dart';
@@ -78,6 +79,10 @@ class _LivePageState extends ConsumerState<LivePage> {
               title: '电视直播',
               subtitle: _selectedSource?.name ?? '全球高清直播频道',
               actions: [
+                IconButton(
+                  onPressed: () => context.push('/settings'),
+                  icon: const Icon(LucideIcons.settings, size: 20),
+                ),
                 if (_sources.length > 1)
                   PopupMenuButton<LiveSource>(
                     icon: const Icon(LucideIcons.listVideo, size: 20),

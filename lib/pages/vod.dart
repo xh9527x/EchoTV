@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/movie.dart';
@@ -166,6 +167,11 @@ class _VodPageState extends ConsumerState<VodPage> {
         centerTitle: false,
         actions: [
           IconButton(
+            icon: const Icon(LucideIcons.settings, size: 20),
+            tooltip: '设置',
+            onPressed: () => context.push('/settings'),
+          ),
+          IconButton(
             icon: const Icon(LucideIcons.search),
             tooltip: '搜索当前源',
             onPressed: _site == null
@@ -292,6 +298,102 @@ class _VodPageState extends ConsumerState<VodPage> {
         final w = constraints.maxWidth;
         // 移动端用用户设置的列数，大屏保持响应式
         final crossAxisCount = w > 800 ? 5 : (w > 600 ? 4 : userColumns);
+
+        // 单列用横向卡片列表
+        if (crossAxisCount == 1) {
+          return ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            itemCount: _videos.length + 1,
+            itemBuilder: (_, i) {
+              if (i == _videos.length) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: _loadingMore
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            _page >= _pageCount ? '— 到底了 —' : '',
+                            style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                          ),
+                  ),
+                );
+              }
+              final v = _videos[i];
+              return GestureDetector(
+                onTap: () => _openDetail(v),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: SizedBox(
+                          width: 84,
+                          height: 112,
+                          child: CoverImage(
+                            imageUrl: v.poster,
+                            fit: BoxFit.cover,
+                            alignment: Alignment.centerLeft,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              v.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            if ((v.typeName ?? '').isNotEmpty || (v.year ?? '').isNotEmpty)
+                              Text(
+                                [v.year, v.typeName].where((e) => (e ?? '').isNotEmpty).join(' · '),
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                              ),
+                            if ((v.desc ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                v.desc!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
+        // 2/3列：精确计算高宽比，消除底部留白
+        // 卡片 = 海报(3:4) + 6px + 标题(1行~20px) + 副标题(1行~16px)
+        const horizontalPadding = 32.0; // 16*2
+        const spacing = 12.0;
+        final itemWidth = (w - horizontalPadding - (crossAxisCount - 1) * spacing) / crossAxisCount;
+        const textHeight = 48.0;
+        final posterHeight = itemWidth / 0.75;
+        final childAspectRatio = itemWidth / (posterHeight + textHeight);
+
         return GridView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -299,7 +401,7 @@ class _VodPageState extends ConsumerState<VodPage> {
             crossAxisCount: crossAxisCount,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.72,
+            childAspectRatio: childAspectRatio,
           ),
           itemCount: _videos.length + 1,
           itemBuilder: (_, i) {
