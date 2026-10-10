@@ -42,8 +42,17 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Decode Keystore
+        if: matrix.target == 'Android'
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > /tmp/echotv.jks
+
       - name: Build Application
         run: ${{ matrix.build_cmd }}
+        env:
+          KEYSTORE_PATH: /tmp/echotv.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Set artifact name
         id: artifact
