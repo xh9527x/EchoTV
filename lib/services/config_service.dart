@@ -33,6 +33,7 @@ class ConfigService {
   static const String keyHasAgreedTerms = 'has_agreed_terms';
   static const String keyPlayerVolume = 'player_volume';
   static const String keyAdBlockEnabled = 'enable_blockad';
+  static const String keyAspectRatio = 'aspect_ratio';
   static const String keyAdBlockKeywords = 'ad_block_keywords';
   static const String keyAdBlockWhitelist = 'ad_block_whitelist';
   static const String keyDohEnabled = 'doh_enabled';
@@ -77,6 +78,16 @@ class ConfigService {
   Future<void> setAdBlockEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(keyAdBlockEnabled, enabled);
+  }
+
+  Future<String> getAspectRatio() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyAspectRatio) ?? 'auto';
+  }
+
+  Future<void> setAspectRatio(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyAspectRatio, value);
   }
 
   Future<bool> getDohEnabled() async {

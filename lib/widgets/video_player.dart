@@ -161,12 +161,19 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
       // 进度监听
       controller.addListener(_videoListener);
 
+      final aspectRatioPref = ref.read(aspectRatioProvider);
+      double? targetRatio;
+      if (aspectRatioPref == '4:3') {
+        targetRatio = 4 / 3;
+      } else if (aspectRatioPref == '16:9') {
+        targetRatio = 16 / 9;
+      }
       _chewieController = ChewieController(
         videoPlayerController: controller,
         autoPlay: true,
         looping: false,
         startAt: startAt,
-        aspectRatio: controller.value.aspectRatio,
+        aspectRatio: targetRatio ?? controller.value.aspectRatio,
         allowFullScreen: true,
         isLive: widget.isLive,
         customControls: ZenVideoControls(

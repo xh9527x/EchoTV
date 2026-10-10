@@ -7,7 +7,9 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/site.dart';
+import '../providers/settings_provider.dart';
 import 'zen_ui.dart';
 
 class ZenVideoControls extends StatefulWidget {
@@ -377,6 +379,33 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
     );
   }
 
+  void _showRatioDialog(BuildContext context, WidgetRef ref) {
+    final current = ref.read(aspectRatioProvider);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('画面比例', style: TextStyle(fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final opt in ['auto', '4:3', '16:9'])
+              RadioListTile<String>(
+                title: Text(opt == 'auto' ? '自动' : opt, style: const TextStyle(fontSize: 14)),
+                value: opt,
+                groupValue: current,
+                onChanged: (v) {
+                  if (v != null) {
+                    ref.read(aspectRatioProvider.notifier).setRatio(v);
+                    Navigator.pop(ctx);
+                  }
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMainSettingsList() {
     return ListView(
       padding: EdgeInsets.zero,
@@ -386,6 +415,18 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
           subtitle: '${_latestValue?.playbackSpeed}x',
           trailing: const Icon(LucideIcons.chevronRight, color: Colors.white38, size: 12),
           onTap: () => setState(() => _showSpeedSubMenu = true),
+        ),
+        Consumer(
+          builder: (context, ref, _) {
+            final ratio = ref.watch(aspectRatioProvider);
+            final label = ratio == 'auto' ? '自动' : ratio;
+            return _buildSettingItem(
+              title: '画面比例',
+              subtitle: label,
+              trailing: const Icon(LucideIcons.chevronRight, color: Colors.white38, size: 12),
+              onTap: () => _showRatioDialog(context, ref),
+            );
+          },
         ),
         _buildSettingItem(
           title: '去广告',

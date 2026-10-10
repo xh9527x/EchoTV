@@ -111,6 +111,27 @@ class PlayerVolumeModel extends Notifier<double> {
 
 final adBlockEnabledProvider = NotifierProvider<AdBlockEnabledModel, bool>(AdBlockEnabledModel.new);
 
+final aspectRatioProvider = NotifierProvider<AspectRatioModel, String>(AspectRatioModel.new);
+
+class AspectRatioModel extends Notifier<String> {
+  @override
+  String build() {
+    _load();
+    return 'auto';
+  }
+
+  Future<void> _load() async {
+    final configService = ref.read(configServiceProvider);
+    state = await configService.getAspectRatio();
+  }
+
+  Future<void> setRatio(String value) async {
+    state = value;
+    final configService = ref.read(configServiceProvider);
+    await configService.setAspectRatio(value);
+  }
+}
+
 class AdBlockEnabledModel extends Notifier<bool> {
   @override
   bool build() {
