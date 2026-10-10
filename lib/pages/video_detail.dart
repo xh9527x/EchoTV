@@ -775,8 +775,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                       fontSize: 13,
                       color: isDark ? theme.colorScheme.onSurface : Colors.white.withValues(alpha: 0.9),
                     )),
-                    Icon(LucideIcons.chevronRight, size: 14,
-                      color: (isDark ? theme.colorScheme.onSurface : Colors.white).withValues(alpha: 0.5)),
+
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -814,13 +813,16 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
           if (_credits == null || _credits!.isNotEmpty) ...[
             const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
                 Text('演职员', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                if (_credits != null && _credits!.isNotEmpty)
-                  Text('全部${_credits!.length} ›', style: theme.textTheme.bodySmall?.copyWith(
+                if (_credits != null && _credits!.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Text('${_credits!.length}', style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   )),
+                ],
               ],
             ),
             const SizedBox(height: 12),
