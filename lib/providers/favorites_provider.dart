@@ -22,7 +22,7 @@ class FavoritesNotifier extends Notifier<AsyncValue<List<Favorite>>> {
 
   Future<void> toggle(Favorite fav) async {
     final service = ref.read(configServiceProvider);
-    final current = [...(state.value ?? [])];
+    final current = <Favorite>[...(state.value ?? <Favorite>[])];
     final idx = current.indexWhere((e) => e.title == fav.title && e.sourceName == fav.sourceName);
     if (idx >= 0) {
       current.removeAt(idx);
@@ -39,7 +39,7 @@ class FavoritesNotifier extends Notifier<AsyncValue<List<Favorite>>> {
 
   Future<void> remove(Favorite fav) async {
     final service = ref.read(configServiceProvider);
-    final current = [...(state.value ?? [])]..removeWhere((e) => e.title == fav.title && e.sourceName == fav.sourceName);
+    final current = <Favorite>[...(state.value ?? <Favorite>[])]..removeWhere((e) => e.title == fav.title && e.sourceName == fav.sourceName);
     await service.saveFavorites(current);
     state = AsyncData(current);
   }
