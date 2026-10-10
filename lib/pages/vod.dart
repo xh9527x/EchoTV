@@ -5,6 +5,7 @@ import '../models/movie.dart';
 import '../models/site.dart';
 import '../services/cms_service.dart';
 import '../services/config_service.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/cover_image.dart';
 import 'search.dart';
 import 'video_detail.dart';
@@ -285,10 +286,12 @@ class _VodPageState extends ConsumerState<VodPage> {
         child: Text('该分类暂无内容', style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
       );
     }
+    final userColumns = ref.watch(gridColumnsProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        final crossAxisCount = w > 800 ? 5 : (w > 600 ? 4 : (w > 400 ? 3 : 2));
+        // 移动端用用户设置的列数，大屏保持响应式
+        final crossAxisCount = w > 800 ? 5 : (w > 600 ? 4 : userColumns);
         return GridView.builder(
           controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -323,7 +326,12 @@ class _VodPageState extends ConsumerState<VodPage> {
                   Expanded(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: CoverImage(imageUrl: v.poster, fit: BoxFit.cover),
+                      child: CoverImage(
+                        imageUrl: v.poster,
+                        fit: BoxFit.cover,
+                        // 横图取左半（F方案：书封面类）
+                        alignment: Alignment.centerLeft,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6),

@@ -360,13 +360,27 @@ class MovieCard extends ConsumerWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          Text(
-            '⭐ ${movie.rate}',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.secondary,
-              fontSize: 11,
-              fontWeight: FontWeight.bold
-            ),
+          Row(
+            children: [
+              Text(
+                '⭐ ${movie.rate}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold
+                ),
+              ),
+              if (movie.pubdate != null && movie.pubdate!.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Text(
+                  movie.pubdate!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),

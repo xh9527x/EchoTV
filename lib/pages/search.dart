@@ -290,7 +290,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           (context, index) {
             final group = entries[index];
             final representative = group.first;
-            return _buildMovieCard(representative, badge: '${group.length} 源');
+            // 1个源时显示源名，多个源时显示数量
+            final badge = group.length == 1
+                ? representative.sourceName
+                : '${group.length} 源';
+            return _buildMovieCard(representative, badge: badge);
           },
           childCount: entries.length,
         ),
