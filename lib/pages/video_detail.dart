@@ -606,7 +606,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = isPC ? 48.0 : 4.0;
+    final horizontalPadding = isPC ? 48.0 : 0.0;
     final playerHeight = isPC ? _calculatePlayerHeight(screenWidth) : ((screenWidth - 2 * horizontalPadding) / (16 / 9));
 
     return Container(
@@ -1175,13 +1175,34 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 84,
-                  height: 112,
-                  child: CoverImage(imageUrl: video.poster, fit: BoxFit.cover),
-                ),
+              Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 84,
+                      height: 112,
+                      child: CoverImage(imageUrl: video.poster, fit: BoxFit.cover),
+                    ),
+                  ),
+                  if (video.score != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, size: 12, color: Color(0xFFF5A623)),
+                        const SizedBox(width: 2),
+                        Text(
+                          video.score!.toStringAsFixed(1),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(width: 12),
               Expanded(
