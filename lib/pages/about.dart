@@ -86,17 +86,7 @@ class _AboutPageState extends State<AboutPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => _openUrl('https://github.com/xh9527x/EchoTV'),
-                    child: Text(
-                      '本项目：github.com/xh9527x/EchoTV',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.primary,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ),
+
                 ],
               ),
             ),
