@@ -368,7 +368,27 @@ class CmsService {
       director: (item['vod_director'] ?? '').toString().trim().isEmpty ? null : (item['vod_director']).toString().trim(),
       area: (item['vod_area'] ?? '').toString().trim().isEmpty ? null : (item['vod_area']).toString().trim(),
       remarks: (item['vod_remarks'] ?? '').toString().trim().isEmpty ? null : (item['vod_remarks']).toString().trim(),
+      score: _parseScore(item['vod_douban_score'] ?? item['vod_score']),
+      duration: (item['vod_duration'] ?? '').toString().trim().isEmpty ? null : item['vod_duration'].toString().trim(),
+      uploadTime: _parseDate(item['vod_time']),
     );
+  }
+
+  /// 解析日期（取 YYYY-MM-DD 部分）
+  static String? _parseDate(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString().trim();
+    if (s.isEmpty) return null;
+    // "2026-10-10 16:53:31" -> "2026-10-10"
+    final match = RegExp(r'\d{4}-\d{2}-\d{2}').firstMatch(s);
+    return match?.group(0);
+  }
+
+  /// 解析评分（>0 才返回）
+  static double? _parseScore(dynamic v) {
+    if (v == null) return null;
+    final d = double.tryParse(v.toString()) ?? 0;
+    return d > 0 ? d : null;
   }
 
   /// 清理 HTML：去标签 + 反转义实体
