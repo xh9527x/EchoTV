@@ -362,8 +362,27 @@ class CmsService {
       source: site.key,
       sourceName: site.name,
       year: item['vod_year']?.toString(),
-      desc: (item['vod_content'] ?? '').toString().replaceAll(RegExp(r'<[^>]*>'), '').trim(),
+      desc: _cleanHtml((item['vod_content'] ?? '').toString()),
       typeName: item['type_name'],
+      actor: (item['vod_actor'] ?? '').toString().trim().isEmpty ? null : (item['vod_actor']).toString().trim(),
+      director: (item['vod_director'] ?? '').toString().trim().isEmpty ? null : (item['vod_director']).toString().trim(),
+      area: (item['vod_area'] ?? '').toString().trim().isEmpty ? null : (item['vod_area']).toString().trim(),
+      remarks: (item['vod_remarks'] ?? '').toString().trim().isEmpty ? null : (item['vod_remarks']).toString().trim(),
     );
+  }
+
+  /// 清理 HTML：去标签 + 反转义实体
+  static String _cleanHtml(String html) {
+    var text = html.replaceAll(RegExp(r'<[^>]*>'), '');
+    // HTML 实体反转义
+    text = text
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll(RegExp(r'&#(\d+);'), ''); // 其他数字实体直接去掉
+    return text.replaceAll(RegExp(r'[ \t]+'), ' ').trim();
   }
 }

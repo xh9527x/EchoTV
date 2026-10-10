@@ -50,18 +50,7 @@ class DoubanService {
         return null;
       }
 
-      return DoubanSubject(
-        id: data['id'].toString(),
-        title: data['title'] ?? '',
-        rate: data['rating']?['value']?.toString() ?? '0.0',
-        cover: data['pic']?['normal'] ?? data['pic']?['large'] ?? '',
-        year: data['year']?.toString(),
-        pubdate: (data['pubdate'] is List && (data['pubdate'] as List).isNotEmpty)
-            ? (data['pubdate'] as List).first.toString()
-            : data['pubdate']?.toString(),
-        url: data['url'],
-        description: data['intro'] ?? data['abstract'] ?? '',
-      );
+      return DoubanSubject.fromJson(data);
     } catch (e) {
       // Fallback for TV series
       try {
@@ -93,6 +82,38 @@ class DoubanService {
       } catch (e2) {
         return null;
       }
+    }
+  }
+
+  /// 获取演职员（含头像）
+  Future<List<Map<String, String>>> getCredits(String id) async {
+    try {
+      final baseUrl = await getDoubanBase('m');
+      final response = await _dio.get('$baseUrl/rexxar/api/v2/movie/$id/credits');
+      Map<String, dynamic> data;
+      if (response.data is String) {
+        data = jsonDecode(response.data);
+      } else if (response.data is Map) {
+        data = Map<String, dynamic>.from(response.data);
+      } else {
+        return [];
+      }
+      final items = data['items'] as List? ?? [];
+      return items.map((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final avatar = m['avatar'];
+        String avatarUrl = '';
+        if (avatar is Map) {
+          avatarUrl = avatar['large']?.toString() ?? avatar['normal']?.toString() ?? '';
+        }
+        return {
+          'name': m['name']?.toString() ?? '',
+          'avatar': avatarUrl,
+          'role': m['simple_character']?.toString() ?? m['character']?.toString() ?? '',
+        };
+      }).toList();
+    } catch (e) {
+      return [];
     }
   }
 
