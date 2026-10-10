@@ -6,6 +6,8 @@ class SiteConfig {
   final String from;
   final bool disabled;
   final String? subscriptionId;
+  final String? group;
+  final bool adult;
 
   SiteConfig({
     required this.key,
@@ -15,7 +17,12 @@ class SiteConfig {
     this.from = 'custom',
     this.disabled = false,
     this.subscriptionId,
+    this.group,
+    this.adult = false,
   });
+
+  /// 显示用的分组名：空则默认为"常规"
+  String get displayGroup => (group == null || group!.isEmpty) ? '常规' : group!;
 
   Map<String, dynamic> toJson() => {
     'key': key,
@@ -25,6 +32,8 @@ class SiteConfig {
     'from': from,
     'disabled': disabled,
     'subscriptionId': subscriptionId,
+    'group': group,
+    'adult': adult,
   };
 
   factory SiteConfig.fromJson(Map<String, dynamic> json) {
@@ -36,6 +45,8 @@ class SiteConfig {
       from: json['from'] ?? 'custom',
       disabled: json['disabled'] ?? false,
       subscriptionId: json['subscriptionId'],
+      group: json['group'],
+      adult: json['adult'] ?? false,
     );
   }
 }

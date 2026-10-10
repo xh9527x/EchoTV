@@ -56,6 +56,9 @@ class DoubanService {
         rate: data['rating']?['value']?.toString() ?? '0.0',
         cover: data['pic']?['normal'] ?? data['pic']?['large'] ?? '',
         year: data['year']?.toString(),
+        pubdate: (data['pubdate'] is List && (data['pubdate'] as List).isNotEmpty)
+            ? (data['pubdate'] as List).first.toString()
+            : data['pubdate']?.toString(),
         url: data['url'],
         description: data['intro'] ?? data['abstract'] ?? '',
       );

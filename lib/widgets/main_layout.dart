@@ -21,7 +21,7 @@ class MainLayout extends ConsumerWidget {
 
         final coreNavItems = isDiscovery
             ? [
-                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
+                {'path': '/', 'label': '发现', 'icon': LucideIcons.home},
                 {'path': '/vod', 'label': '影视', 'icon': LucideIcons.film},
                 {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
               ]
@@ -36,7 +36,7 @@ class MainLayout extends ConsumerWidget {
 
         final pcNavItems = isDiscovery
             ? [
-                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
+                {'path': '/', 'label': '发现', 'icon': LucideIcons.home},
                 {'path': '/vod', 'label': '影视', 'icon': LucideIcons.film},
                 {'path': '/search', 'label': '搜索', 'icon': LucideIcons.search},
                 {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},

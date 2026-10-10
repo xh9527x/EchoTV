@@ -64,6 +64,8 @@ void main() async {
   final container = ProviderContainer();
   // 初始化广告拦截服务器
   await container.read(adBlockServiceProvider).init();
+  // 首次启动时seed预置源
+  await container.read(configServiceProvider).seedDefaultSources();
 
   runApp(
     UncontrolledProviderScope(

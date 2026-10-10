@@ -9,6 +9,7 @@ import '../services/config_service.dart';
 class CoverImage extends ConsumerStatefulWidget {
   final String imageUrl;
   final BoxFit fit;
+  final Alignment alignment;
   final Widget? placeholder;
   final Widget? errorWidget;
   final double aspectRatio;
@@ -17,6 +18,7 @@ class CoverImage extends ConsumerStatefulWidget {
     super.key,
     required this.imageUrl,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
     this.placeholder,
     this.errorWidget,
     this.aspectRatio = 2 / 3,
@@ -99,6 +101,7 @@ class _CoverImageState extends ConsumerState<CoverImage> {
       child: CachedNetworkImage(
         imageUrl: finalUrl,
         fit: widget.fit,
+        alignment: widget.alignment,
         // 添加 Referer 绕过豆瓣防盗链
         httpHeaders: const {
           'Referer': 'https://movie.douban.com/',
