@@ -104,7 +104,7 @@ class DoubanSubject {
       url: json['url'],
       year: json['year'] ?? (cs[0].isNotEmpty ? cs[0].first : null),
       pubdate: pubdate,
-      description: json['description'] ?? json['intro'],
+      description: json['description'] ?? json['intro'] ?? json['summary'],
       directors: _names(json['directors']).isNotEmpty ? _names(json['directors']) : cs[3],
       actors: _names(json['actors']).isNotEmpty ? _names(json['actors']) : cs[4],
       countries: _strList(json['countries']).isNotEmpty ? _strList(json['countries']) : cs[1],
