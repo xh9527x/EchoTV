@@ -73,6 +73,9 @@ class VideoDetail {
   final String? director;
   final String? area;
   final String? remarks;
+  final double? score;
+  final String? duration;
+  final String? uploadTime;
 
   VideoDetail({
     required this.id,
@@ -88,6 +91,9 @@ class VideoDetail {
     this.director,
     this.area,
     this.remarks,
+    this.score,
+    this.duration,
+    this.uploadTime,
   });
 
   @override
