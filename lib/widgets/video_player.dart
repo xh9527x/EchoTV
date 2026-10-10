@@ -7,6 +7,7 @@ import '../services/logger_service.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/site.dart';
 import '../services/ad_block_service.dart';
+import '../services/share_url_resolver.dart';
 import '../providers/settings_provider.dart';
 import 'video_controls.dart';
 
@@ -153,28 +154,49 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
       await Future.delayed(const Duration(milliseconds: 200));
       if (_isDisposed) return;
 
+      // 日志：记录播放 URL（脱敏：只保留 host 和路径前 80 字符）
+      final logger = ref.read(loggerServiceProvider);
+      logger.log('Player', '原始URL: ${_shortUrl(widget.url)}');
+
+      // 0. 分享页预解析（借鉴 lemonTV-Film）：/share/ 等网页地址先解析出真实流地址，
+      //    失败则回退直接播放原地址。注意：只解决"播放器直接啃 HTML 页"类 Source error，
+      //    不解决 CDN 地域封锁（403）。
+      var playRawUrl = widget.url;
+      String? resolvedReferer;
+      if (ShareUrlResolver.looksLikeShareOrPageUrl(playRawUrl)) {
+        logger.log('Player', '检测到分享页地址，尝试解析真实播放地址…');
+        final resolved = await ShareUrlResolver().resolveSharePage(playRawUrl);
+        if (resolved != null) {
+          playRawUrl = resolved.url;
+          resolvedReferer = resolved.referer;
+          logger.log('Player', '分享页解析成功: ${_shortUrl(playRawUrl)}');
+        } else {
+          logger.log('Player', '分享页解析失败，回退直接播放原地址');
+        }
+      }
+      final effectiveReferer = (resolvedReferer?.isNotEmpty ?? false)
+          ? resolvedReferer
+          : ((widget.referer?.isNotEmpty ?? false) ? widget.referer : null);
+
       // 1. 判定是否为标准的 M3U8 格式（用于代理服务器处理）
-      final isM3u8 = widget.url.toLowerCase().contains('.m3u8');
+      final isM3u8 = playRawUrl.toLowerCase().contains('.m3u8');
       
       // 2. 判定是否需要开启去广告代理（仅限点播且是 M3U8）
       final isAdBlockEnabled = ref.read(adBlockEnabledProvider);
       final playUrl = (!widget.isLive && isAdBlockEnabled && isM3u8)
-          ? ref.read(adBlockServiceProvider).getProxyUrl(widget.url, referer: widget.referer)
-          : widget.url;
+          ? ref.read(adBlockServiceProvider).getProxyUrl(playRawUrl, referer: effectiveReferer)
+          : playRawUrl;
 
-      // 日志：记录播放 URL（脱敏：只保留 host 和路径前 80 字符）
-      final logger = ref.read(loggerServiceProvider);
-      logger.log('Player', '原始URL: ${_shortUrl(widget.url)}');
       logger.log('Player', '代理${(!widget.isLive && isAdBlockEnabled && isM3u8) ? "开启" : "关闭"}，播放URL: ${_shortUrl(playUrl)}');
-      if (widget.referer != null && widget.referer!.isNotEmpty) {
-        logger.log('Player', 'Referer: ${widget.referer}');
+      if (effectiveReferer != null) {
+        logger.log('Player', 'Referer: $effectiveReferer');
       }
 
       // 3. 判定是否给播放器 HLS 格式提示
       bool useHlsHint = isM3u8;
       if (widget.isLive && !isM3u8) {
         final otherExtensions = ['.mp4', '.mov', '.mpd', '.mkv', '.webm'];
-        if (!otherExtensions.any((ext) => widget.url.toLowerCase().contains(ext))) {
+        if (!otherExtensions.any((ext) => playRawUrl.toLowerCase().contains(ext))) {
           useHlsHint = true; 
         }
       }
@@ -183,7 +205,7 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
         Uri.parse(playUrl),
         httpHeaders: {
           'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36',
-          if (widget.referer != null && widget.referer!.isNotEmpty) 'Referer': widget.referer!,
+          if (effectiveReferer != null) 'Referer': effectiveReferer,
         },
         formatHint: useHlsHint ? VideoFormat.hls : null,
       );

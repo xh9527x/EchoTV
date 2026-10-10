@@ -560,12 +560,15 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                   children: [
                     // 播放器0间隙：在Padding外面，左右顶满；顶部8px避开导航栏
                     const SizedBox(height: 8),
-                    _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
+                    _buildVideoPlayer(theme, isPC),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _buildCollapsibleInfo(theme, isPC),
+                          const SizedBox(height: 12),
+                          _buildEpisodePanel(theme, isPC ? _calculatePlayerHeight(screenWidth) : 360),
                           // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
                           if (isPC) ...[
                             const SizedBox(height: 24),
