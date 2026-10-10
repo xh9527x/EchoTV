@@ -13,6 +13,7 @@ import '../services/video_quality_service.dart';
 import '../services/source_optimizer_service.dart';
 import '../services/logger_service.dart';
 import '../widgets/cover_image.dart';
+import '../providers/favorites_provider.dart';
 import '../widgets/zen_ui.dart';
 import '../widgets/video_player.dart';
 
@@ -479,6 +480,36 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                actions: [
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final favState = ref.watch(favoritesProvider);
+                      final isFav = favState.maybeWhen(
+                        data: (list) => list.any((e) => e.title == widget.subject.title),
+                        orElse: () => false,
+                      );
+                      return IconButton(
+                        icon: Icon(
+                          isFav ? LucideIcons.heart : LucideIcons.heart,
+                          size: 20,
+                          color: isFav ? Colors.redAccent : null,
+                        ),
+                        onPressed: () {
+                          final subject = _fullSubject ?? widget.subject;
+                          ref.read(favoritesProvider.notifier).toggle(Favorite(
+                            title: subject.title,
+                            sourceName: _currentSource?.sourceName ?? '',
+                            cover: subject.cover,
+                            year: subject.year ?? '',
+                            totalEpisodes: _currentSource?.playGroups.firstOrNull?.urls.length ?? 0,
+                            saveTime: DateTime.now().millisecondsSinceEpoch,
+                            searchTitle: subject.title,
+                          ));
+                        },
+                      );
+                    },
+                  ),
+                ],
               ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -672,13 +703,31 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 110,
-                  height: 150,
-                  child: CoverImage(imageUrl: subject.cover, fit: BoxFit.cover),
-                ),
+              Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 110,
+                      height: 150,
+                      child: CoverImage(imageUrl: subject.cover, fit: BoxFit.cover),
+                    ),
+                  ),
+                  if (subject.starCount > 0) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildStarBar(subject.starCount, 12),
+                        const SizedBox(width: 4),
+                        Text(
+                          subject.rate,
+                          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -885,12 +934,10 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                   color: theme.colorScheme.secondary,
                 ),
                 const SizedBox(width: 8),
-                Expanded(
+                const Expanded(
                   child: Text(
-                    widget.subject.title,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    '影片信息',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -898,7 +945,8 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
           ),
         ),
         if (_isInfoExpanded)
-          _currentSource != null
+          // 发现版（传了 initialVideo）显示 CMS 信息；经典版永远显示豆瓣信息
+          widget.initialVideo != null && _currentSource != null
               ? _buildCmsInfoSection(theme, _currentSource!)
               : _buildDetailSection(theme, isPC),
       ],
