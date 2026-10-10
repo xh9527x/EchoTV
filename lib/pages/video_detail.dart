@@ -37,6 +37,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
   late HistoryNotifier _historyNotifier;
   
   DoubanSubject? _fullSubject;
+  List<Map<String, String>>? _credits;
   bool _isDetailLoading = true;
   String _doubanId = '';
   
@@ -144,6 +145,10 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
 
     if (_doubanId.isNotEmpty) {
+      // 演职员并行加载（懒加载，不挡主内容）
+      doubanService.getCredits(_doubanId).then((val) {
+        if (mounted) setState(() => _credits = val);
+      });
       doubanService.getDetail(_doubanId).then((val) {
         if (val == null) {
           debugPrint('⚠️ 豆瓣详情获取为空: id=$_doubanId');
@@ -601,7 +606,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = isPC ? 48.0 : 12.0;
+    final horizontalPadding = isPC ? 48.0 : 4.0;
     final playerHeight = isPC ? _calculatePlayerHeight(screenWidth) : ((screenWidth - 2 * horizontalPadding) / (16 / 9));
 
     return Container(
@@ -643,56 +648,224 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
   }
 
   Widget _buildDetailSection(ThemeData theme, bool isPC) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isPC) ...[
-          SizedBox(width: 200, child: ClipRRect(borderRadius: BorderRadius.circular(16), child: AspectRatio(aspectRatio: 2/3, child: CoverImage(imageUrl: widget.subject.cover)))),
-          const SizedBox(width: 48),
-        ],
-        Expanded(
-          child: Column(
+    final subject = _fullSubject ?? widget.subject;
+    final isDark = theme.brightness == Brightness.dark;
+
+    // meta行：地区 / 类型 / 上映日期 / 片长
+    final metaParts = <String>[
+      if (subject.countries.isNotEmpty) subject.countries.join(' '),
+      if (subject.genres.isNotEmpty) subject.genres.join(' '),
+      if ((subject.pubdate ?? '').isNotEmpty) '${subject.pubdate}上映',
+      if (subject.durations.isNotEmpty) '片长${subject.durations.first}',
+    ];
+
+    // 评分卡背景：浅色主题用深卡，深色主题用稍亮 surface
+    final ratingCardColor = isDark
+        ? theme.colorScheme.surfaceContainerHighest
+        : const Color(0xFF3A2A2A);
+
+    return SelectionArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 顶部：海报 + 标题 + meta
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: [
-                Expanded(child: Text(widget.subject.title, style: theme.textTheme.displayMedium?.copyWith(fontWeight: FontWeight.w900, fontSize: isPC ? 32 : 24))),
-                if ((_fullSubject?.rate ?? widget.subject.rate).isNotEmpty && (_fullSubject?.rate ?? widget.subject.rate) != '0.0') 
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), 
-                    decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), 
-                    child: Text('⭐ ${_fullSubject?.rate ?? widget.subject.rate}', style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 14))
-                  ),
-              ]),
-              const SizedBox(height: 16),
-              Wrap(spacing: 12, runSpacing: 8, children: [
-                if (widget.subject.year != null && widget.subject.year!.isNotEmpty) 
-                  _buildInfoBadge(widget.subject.year!, theme),
-                if (_currentSource != null) 
-                  _buildInfoBadge(
-                    _currentSource!.sourceName, 
-                    theme, 
-                    isAccent: true,
-                    onTap: () => _tabController.animateTo(1)
-                  ),
-                if (_currentSource != null)
-                  _buildInfoBadge('${_currentSource!.playGroups.first.urls.length} 集', theme)
-                else if (_isSearching)
-                  Container(
-                    width: 60,
-                    height: 24,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 110,
+                  height: 150,
+                  child: CoverImage(imageUrl: subject.cover, fit: BoxFit.cover),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject.title,
+                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    if ((subject.year ?? '').isNotEmpty)
+                      Text('(${subject.year})', style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      )),
+                    if (metaParts.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        metaParts.join(' / '),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                          height: 1.7,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 评分卡
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: ratingCardColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('豆瓣评分', style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? theme.colorScheme.onSurface : Colors.white.withValues(alpha: 0.9),
+                    )),
+                    Icon(LucideIcons.chevronRight, size: 14,
+                      color: (isDark ? theme.colorScheme.onSurface : Colors.white).withValues(alpha: 0.5)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      subject.rate,
+                      style: TextStyle(
+                        fontSize: 38,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? theme.colorScheme.onSurface : Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStarBar(subject.starCount, 16),
+                        const SizedBox(height: 4),
+                        Text(
+                          subject.ratingCount > 0 ? '${_formatCount(subject.ratingCount)}人评分' : '',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: (isDark ? theme.colorScheme.onSurface : Colors.white).withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // 演职员
+          if (_credits == null || _credits!.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('演职员', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                if (_credits != null && _credits!.isNotEmpty)
+                  Text('全部${_credits!.length} ›', style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  )),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (_credits == null)
+              SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: 4,
+                  itemBuilder: (_, __) => Container(
+                    width: 72,
+                    margin: const EdgeInsets.only(right: 12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-              ]),
-              const SizedBox(height: 24),
-              _buildDescriptionSection(theme),
-            ],
-          ),
-        ),
-      ],
+                ),
+              )
+            else
+              SizedBox(
+                height: 130,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _credits!.length,
+                  itemBuilder: (_, i) {
+                    final c = _credits![i];
+                    return Container(
+                      width: 72,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: SizedBox(
+                              width: 72,
+                              height: 90,
+                              child: c['avatar']!.isNotEmpty
+                                  ? CoverImage(imageUrl: c['avatar']!, fit: BoxFit.cover)
+                                  : Container(color: theme.colorScheme.surfaceContainerHighest),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(c['name']!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                          Text(c['role']!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                            )),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+          // 简介
+          if ((subject.description ?? '').isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text('简介', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text(subject.description!, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
+          ],
+        ],
+      ),
     );
+  }
+
+  /// 星级条：5星=10分
+  Widget _buildStarBar(double starCount, double size) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final fill = (starCount - i).clamp(0.0, 1.0);
+        return Stack(
+          children: [
+            Icon(Icons.star_border, size: size, color: Colors.grey.withValues(alpha: 0.4)),
+            ClipRect(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: fill,
+                child: Icon(Icons.star, size: size, color: const Color(0xFFF5A623)),
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 10000) return '${(count / 10000).toStringAsFixed(1)}万';
+    return count.toString();
   }
 
   /// 可折叠的影片信息区：默认收起，点击箭头展开
@@ -724,7 +897,10 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
             ),
           ),
         ),
-        if (_isInfoExpanded) _buildDetailSection(theme, isPC),
+        if (_isInfoExpanded)
+          _currentSource != null
+              ? _buildCmsInfoSection(theme, _currentSource!)
+              : _buildDetailSection(theme, isPC),
       ],
     );
   }
@@ -982,5 +1158,85 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
       const SizedBox(width: 4),
       isTesting ? SizedBox(width: 30, height: 2, child: LinearProgressIndicator(backgroundColor: Colors.transparent, color: color.withValues(alpha: 0.3))) : Text(text, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600, fontFamily: 'monospace')),
     ]);
+  }
+
+  /// 发现版 CMS 影片信息（参照 ZY-Player）：左封面 + 右信息，全区可长按复制
+  Widget _buildCmsInfoSection(ThemeData theme, VideoDetail video) {
+    final chips = <String>[
+      if ((video.year ?? '').isNotEmpty) video.year!,
+      if ((video.area ?? '').isNotEmpty) video.area!,
+      if ((video.typeName ?? '').isNotEmpty) video.typeName!,
+      if ((video.remarks ?? '').isNotEmpty) video.remarks!,
+    ];
+    return SelectionArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: 84,
+                  height: 112,
+                  child: CoverImage(imageUrl: video.poster, fit: BoxFit.cover),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(video.title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    if (chips.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: chips.map((c) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(c, style: theme.textTheme.bodySmall?.copyWith(fontSize: 11)),
+                        )).toList(),
+                      ),
+                    ],
+                    if ((video.director ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: '导演：', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                          TextSpan(text: video.director!, style: theme.textTheme.bodySmall),
+                        ]),
+                      ),
+                    ],
+                    if ((video.actor ?? '').isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text.rich(
+                        TextSpan(children: [
+                          TextSpan(text: '主演：', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                          TextSpan(text: video.actor!, style: theme.textTheme.bodySmall),
+                        ]),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if ((video.desc ?? '').isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('简介', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: theme.hintColor)),
+            const SizedBox(height: 4),
+            Text(video.desc!, style: theme.textTheme.bodyMedium?.copyWith(height: 1.7)),
+          ],
+        ],
+      ),
+    );
   }
 }
