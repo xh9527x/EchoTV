@@ -325,6 +325,22 @@ class MovieCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 child: CoverImage(imageUrl: movie.cover),
               ),
+              if ((movie.year ?? '').isNotEmpty)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      movie.year!,
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               if (badge != null)
                 Positioned(
                   top: 8,
@@ -377,16 +393,7 @@ class MovieCard extends ConsumerWidget {
                   fontWeight: FontWeight.bold
                 ),
               ),
-              if ((movie.year ?? '').isNotEmpty) ...[
-                const SizedBox(width: 6),
-                Text(
-                  movie.year!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
-                    fontSize: 10,
-                  ),
-                ),
-              ] else if (movie.pubdate != null && movie.pubdate!.isNotEmpty) ...[
+              if (movie.pubdate != null && movie.pubdate!.isNotEmpty) ...[
                 const SizedBox(width: 6),
                 Text(
                   movie.pubdate!,
