@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -162,7 +163,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   _buildActionItem(
                     icon: LucideIcons.clipboard,
                     title: '从剪贴板导入',
-                    onTap: _showJsonImport,
+                    onTap: _importFromClipboard,
                   ),
                   _buildActionItem(
                     icon: LucideIcons.fileJson,
@@ -911,6 +912,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   // --- 逻辑操作 (保持原有) ---
 
+  /// 从剪贴板直接导入（不经过粘贴框，避免大 JSON 被截断）
+  void _importFromClipboard() async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final text = data?.text?.trim() ?? '';
+      if (text.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('剪贴板为空'), behavior: SnackBarBehavior.floating),
+          );
+        }
+        return;
+      }
+      final json = jsonDecode(text);
+      await SubscriptionService(ref.read(configServiceProvider)).importFromJson(json);
+      _loadSettings();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('导入成功'), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('导入失败：$e'), backgroundColor: Colors.redAccent, behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+  }
+
   void _showJsonImport() {
     final controller = TextEditingController();
     showDialog(
@@ -956,8 +987,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _importJsonFromFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
+        type: FileType.any,
       );
       if (result == null || result.files.isEmpty) return;
       final file = result.files.first;
@@ -993,17 +1023,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  /// 导出完整配置为 JSON 文件（echotv-YYYYMMDDHHmm.json），调起系统分享
+  /// 导出完整配置为 JSON 文件（echotv-YYYYMMDDHHmm.json），让用户选择保存位置
   void _exportConfigToFile() async {
     try {
       final config = await ref.read(configServiceProvider).exportAll();
       final now = DateTime.now();
       final name = 'echotv-${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}'
           '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}.json';
-      final dir = Directory.systemTemp;
-      final file = File('${dir.path}/$name');
-      await file.writeAsString(config);
-      await Share.shareXFiles([XFile(file.path, name: name, mimeType: 'application/json')], text: 'EchoTV 配置备份');
+      final bytes = utf8.encode(config);
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: '保存配置',
+        fileName: name,
+        type: FileType.any,
+        bytes: Uint8List.fromList(bytes),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(path == null ? '已取消' : '已保存到：$path'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('导出失败：$e'), behavior: SnackBarBehavior.floating));
