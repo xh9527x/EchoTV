@@ -515,7 +515,8 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 播放器顶满：放在 Padding 外面，不受 24px 边距限制
+                    // 播放器顶满：放在 Padding 外面，不受 24px 边距限制；顶部留 8px 避开导航栏
+                    const SizedBox(height: 8),
                     _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
