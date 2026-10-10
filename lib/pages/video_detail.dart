@@ -58,6 +58,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
   bool _hasTriggeredInitialInit = false;
   bool _descending = false;
   bool _isEpisodeSelectorCollapsed = false;
+  bool _isInfoExpanded = false;
 
   final Map<String, double> _scoreMap = {};
   final Map<String, VideoQualityInfo> _qualityInfoMap = {};
@@ -481,8 +482,11 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
-                      const SizedBox(height: 24),
-                      _buildDetailSection(theme, isPC),
+                      // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
+                      if (isPC) ...[
+                        const SizedBox(height: 24),
+                        _buildDetailSection(theme, isPC),
+                      ],
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -497,7 +501,12 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
 
   Widget _buildPlayerAndEpisodeSection(ThemeData theme, bool isPC, double screenWidth) {
     if (!isPC) {
-      return Column(children: [_buildVideoPlayer(theme, false), const SizedBox(height: 20), _buildEpisodePanel(theme, 360)]);
+      return Column(children: [
+        _buildVideoPlayer(theme, false),
+        _buildCollapsibleInfo(theme, false),
+        const SizedBox(height: 12),
+        _buildEpisodePanel(theme, 360),
+      ]);
     }
     return Column(
       children: [
@@ -592,7 +601,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = isPC ? 48.0 : 24.0;
+    final horizontalPadding = isPC ? 48.0 : 12.0;
     final playerHeight = isPC ? _calculatePlayerHeight(screenWidth) : ((screenWidth - 2 * horizontalPadding) / (16 / 9));
 
     return Container(
@@ -682,6 +691,40 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  /// 可折叠的影片信息区：默认收起，点击箭头展开
+  Widget _buildCollapsibleInfo(ThemeData theme, bool isPC) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _isInfoExpanded = !_isInfoExpanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                Icon(
+                  _isInfoExpanded ? LucideIcons.chevronDown : LucideIcons.chevronRight,
+                  size: 16,
+                  color: theme.colorScheme.secondary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.subject.title,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_isInfoExpanded) _buildDetailSection(theme, isPC),
       ],
     );
   }

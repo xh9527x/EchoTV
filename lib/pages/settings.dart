@@ -93,6 +93,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () => _showUiLayoutPicker(),
                   ),
                   _buildSelectionItem(
+                    icon: LucideIcons.layoutGrid,
+                    title: '列表列数',
+                    value: '${ref.watch(gridColumnsProvider)} 列',
+                    onTap: () => _showGridColumnsPicker(),
+                  ),
+                  _buildSelectionItem(
                     icon: LucideIcons.palette,
                     title: '主题模式',
                     value: _getThemeModeLabel(ref.watch(themeModelProvider)),
@@ -410,6 +416,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       'discovery': '发现版',
     }, ref.read(uiLayoutProvider), (val) {
       ref.read(uiLayoutProvider.notifier).setLayout(val as String);
+    });
+  }
+
+  void _showGridColumnsPicker() {
+    _showSimplePicker('列表列数', {
+      1: '单列',
+      2: '双列',
+      3: '三列',
+    }, ref.read(gridColumnsProvider), (val) {
+      ref.read(gridColumnsProvider.notifier).setColumns(val as int);
     });
   }
 

@@ -236,3 +236,25 @@ class DohServerModel extends Notifier<String> {
     await configService.setDohServer(url);
   }
 }
+
+/// 列表列数（1/2/3列）
+final gridColumnsProvider = NotifierProvider<GridColumnsModel, int>(GridColumnsModel.new);
+
+class GridColumnsModel extends Notifier<int> {
+  @override
+  int build() {
+    _load();
+    return 2;
+  }
+
+  Future<void> _load() async {
+    final configService = ref.read(configServiceProvider);
+    state = await configService.getGridColumns();
+  }
+
+  Future<void> setColumns(int columns) async {
+    state = columns;
+    final configService = ref.read(configServiceProvider);
+    await configService.setGridColumns(columns);
+  }
+}

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/site.dart';
 import '../models/live.dart';
 import '../models/subscription.dart';
+import 'seed_data.dart';
 
 final configServiceProvider = Provider((ref) => ConfigService());
 
@@ -37,6 +38,7 @@ class ConfigService {
   static const String keyAdBlockWhitelist = 'ad_block_whitelist';
   static const String keyDohEnabled = 'doh_enabled';
   static const String keyDohServer = 'doh_server';
+  static const String keyGridColumns = 'grid_columns';
 
   static const List<String> defaultAdKeywords = [
     'ads', 'union', 'click', 'p6p', 'pop', 'short.mp4', 'advert', 'adv.', 
@@ -98,6 +100,16 @@ class ConfigService {
     await prefs.setString(keyDohServer, url);
   }
 
+  Future<int> getGridColumns() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(keyGridColumns) ?? 2;
+  }
+
+  Future<void> setGridColumns(int columns) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(keyGridColumns, columns);
+  }
+
   Future<bool> getHasAgreedTerms() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(keyHasAgreedTerms) ?? false;
@@ -151,6 +163,53 @@ class ConfigService {
     final prefs = await SharedPreferences.getInstance();
     final data = sites.map((s) => jsonEncode(s.toJson())).toList();
     await prefs.setStringList(keySites, data);
+  }
+
+  static const String _keySeeded = 'seeded_default_sources_v1';
+
+  /// 首次启动时seed预置源（仅一次，用户删除后不再重复插入）
+  Future<void> seedDefaultSources() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_keySeeded) ?? false) return;
+
+    // 预置视频源（group=常规，from=custom，与手动添加一致）
+    final existingSites = await getSitesAll();
+    final existingApis = existingSites.map((s) => s.api).toSet();
+    final newSites = <SiteConfig>[];
+    for (var i = 0; i < defaultVideoSources.length; i++) {
+      final src = defaultVideoSources[i];
+      if (existingApis.contains(src['api'])) continue;
+      newSites.add(SiteConfig(
+        key: 'seed_${DateTime.now().millisecondsSinceEpoch}_$i',
+        name: src['name']!,
+        api: src['api']!,
+        from: 'custom',
+        group: '常规',
+      ));
+    }
+    if (newSites.isNotEmpty) {
+      await saveSites([...existingSites, ...newSites]);
+    }
+
+    // 预置直播源
+    final existingLives = await getLiveSourcesAll();
+    final existingUrls = existingLives.map((l) => l.url).toSet();
+    final newLives = <LiveSource>[];
+    for (var i = 0; i < defaultLiveSources.length; i++) {
+      final src = defaultLiveSources[i];
+      if (existingUrls.contains(src['url'])) continue;
+      newLives.add(LiveSource(
+        key: 'seed_live_${DateTime.now().millisecondsSinceEpoch}_$i',
+        name: src['name']!,
+        url: src['url']!,
+        from: 'custom',
+      ));
+    }
+    if (newLives.isNotEmpty) {
+      await saveLiveSources([...existingLives, ...newLives]);
+    }
+
+    await prefs.setBool(_keySeeded, true);
   }
 
   Future<List<LiveSource>> getLiveSources() async {
