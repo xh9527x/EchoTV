@@ -512,27 +512,20 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                 ],
               ),
               SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 播放器顶满：放在 Padding 外面，不受 24px 边距限制；顶部留 8px 避开导航栏
-                    const SizedBox(height: 8),
-                    _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
-                          if (isPC) ...[
-                            const SizedBox(height: 24),
-                            _buildDetailSection(theme, isPC),
-                          ],
-                          const SizedBox(height: 80),
-                        ],
-                      ),
-                    ),
-                  ],
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPlayerAndEpisodeSection(theme, isPC, screenWidth),
+                      // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
+                      if (isPC) ...[
+                        const SizedBox(height: 24),
+                        _buildDetailSection(theme, isPC),
+                      ],
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -644,14 +637,14 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = isPC ? 48.0 : 0.0;
+    final horizontalPadding = isPC ? 48.0 : 8.0;
     final playerHeight = isPC ? _calculatePlayerHeight(screenWidth) : ((screenWidth - 2 * horizontalPadding) / (16 / 9));
 
     return Container(
       height: playerHeight,
       decoration: BoxDecoration(
-        color: Colors.black, 
-        borderRadius: BorderRadius.circular(20), 
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(8), 
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3), 
