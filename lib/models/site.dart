@@ -69,6 +69,10 @@ class VideoDetail {
   final String? year;
   final String? desc;
   final String? typeName;
+  final String? actor;
+  final String? director;
+  final String? area;
+  final String? remarks;
 
   VideoDetail({
     required this.id,
@@ -80,6 +84,10 @@ class VideoDetail {
     this.year,
     this.desc,
     this.typeName,
+    this.actor,
+    this.director,
+    this.area,
+    this.remarks,
   });
 
   @override
