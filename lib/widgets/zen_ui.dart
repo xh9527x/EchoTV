@@ -362,15 +362,31 @@ class MovieCard extends ConsumerWidget {
           ),
           Row(
             children: [
+              _StarBar(
+                starCount: movie.starCount > 0
+                    ? movie.starCount
+                    : ((double.tryParse(movie.rate) ?? 0) / 2).clamp(0, 5),
+                size: 12,
+              ),
+              const SizedBox(width: 4),
               Text(
-                '⭐ ${movie.rate}',
+                movie.rate,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.secondary,
                   fontSize: 11,
                   fontWeight: FontWeight.bold
                 ),
               ),
-              if (movie.pubdate != null && movie.pubdate!.isNotEmpty) ...[
+              if ((movie.year ?? '').isNotEmpty) ...[
+                const SizedBox(width: 6),
+                Text(
+                  movie.year!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
+                ),
+              ] else if (movie.pubdate != null && movie.pubdate!.isNotEmpty) ...[
                 const SizedBox(width: 6),
                 Text(
                   movie.pubdate!,
@@ -385,5 +401,34 @@ class MovieCard extends ConsumerWidget {
         ],
       ),
     ));
+  }
+}
+
+/// 星级条：5星=10分，支持小数填充
+class _StarBar extends StatelessWidget {
+  final double starCount;
+  final double size;
+  const _StarBar({required this.starCount, this.size = 14});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        final fill = (starCount - i).clamp(0.0, 1.0);
+        return Stack(
+          children: [
+            Icon(Icons.star_border, size: size, color: Colors.grey.withValues(alpha: 0.4)),
+            ClipRect(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: fill,
+                child: Icon(Icons.star, size: size, color: const Color(0xFFF5A623)),
+              ),
+            ),
+          ],
+        );
+      }),
+    );
   }
 }
