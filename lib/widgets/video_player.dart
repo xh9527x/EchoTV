@@ -21,6 +21,8 @@ class EchoVideoPlayer extends ConsumerStatefulWidget {
   final Function(SkipConfig)? onSkipConfigChange;
   final VoidCallback? onNextEpisode;
   final bool hasNextEpisode;
+  final VoidCallback? onPrevEpisode;
+  final bool hasPrevEpisode;
   final Function(Duration position, Duration duration, {bool isFinal})? onProgress;
   final VoidCallback? onEnded;
 
@@ -35,6 +37,8 @@ class EchoVideoPlayer extends ConsumerStatefulWidget {
     this.onSkipConfigChange,
     this.onNextEpisode,
     this.hasNextEpisode = false,
+    this.onPrevEpisode,
+    this.hasPrevEpisode = false,
     this.onProgress,
     this.onEnded,
   });
@@ -109,10 +113,12 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
         },
         hasNextEpisode: widget.hasNextEpisode,
         onNextEpisode: widget.onNextEpisode,
+        hasPrevEpisode: widget.hasPrevEpisode,
+        onPrevEpisode: widget.onPrevEpisode,
       ),
       materialProgressColors: ChewieProgressColors(
-        playedColor: widget.isLive ? Colors.white : const Color(0xFF0A84FF),
-        handleColor: widget.isLive ? Colors.white : const Color(0xFF0A84FF),
+        playedColor: Colors.white,
+        handleColor: Colors.white,
         bufferedColor: Colors.white.withOpacity(0.3),
         backgroundColor: Colors.white.withOpacity(0.1),
       ),
@@ -270,10 +276,12 @@ class EchoVideoPlayerState extends ConsumerState<EchoVideoPlayer> with WidgetsBi
           },
           hasNextEpisode: widget.hasNextEpisode,
           onNextEpisode: widget.onNextEpisode,
+          hasPrevEpisode: widget.hasPrevEpisode,
+          onPrevEpisode: widget.onPrevEpisode,
         ),
         materialProgressColors: ChewieProgressColors(
-          playedColor: widget.isLive ? Colors.white : const Color(0xFF0A84FF),
-          handleColor: widget.isLive ? Colors.white : const Color(0xFF0A84FF),
+          playedColor: Colors.white,
+          handleColor: Colors.white,
           bufferedColor: Colors.white.withOpacity(0.3),
           backgroundColor: Colors.white.withOpacity(0.1),
         ),

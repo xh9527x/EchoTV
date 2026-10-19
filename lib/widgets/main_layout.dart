@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:go_router/go_router.dart';
+import '../core/theme.dart';
 import '../providers/settings_provider.dart';
 
 class MainLayout extends ConsumerWidget {
@@ -19,20 +20,13 @@ class MainLayout extends ConsumerWidget {
       builder: (context, constraints) {
         final isPC = constraints.maxWidth > 800;
 
-        final coreNavItems = isDiscovery
-            ? [
-                {'path': '/', 'label': '发现', 'icon': LucideIcons.home},
-                {'path': '/vod', 'label': '影视', 'icon': LucideIcons.film},
-                {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
-              ]
-            : [
-                {'path': '/', 'label': '首页', 'icon': LucideIcons.home},
-                {'path': '/movies', 'label': '电影', 'icon': LucideIcons.film},
-                {'path': '/series', 'label': '剧集', 'icon': LucideIcons.clapperboard},
-                {'path': '/anime', 'label': '动漫', 'icon': LucideIcons.ghost},
-                {'path': '/variety', 'label': '综艺', 'icon': LucideIcons.sparkles},
-                {'path': '/live', 'label': '直播', 'icon': LucideIcons.tv},
-              ];
+        // 真果鉴皮肤：固定 4 tab（发现/追剧/最近观看/下载）
+        final coreNavItems = [
+          {'path': '/', 'label': '发现', 'icon': LucideIcons.compass},
+          {'path': '/favorites', 'label': '追剧', 'icon': LucideIcons.bookmark},
+          {'path': '/history', 'label': '最近观看', 'icon': LucideIcons.history},
+          {'path': '/downloads', 'label': '下载', 'icon': LucideIcons.download},
+        ];
 
         final pcNavItems = isDiscovery
             ? [
@@ -155,28 +149,36 @@ class MainLayout extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: coreNavItems.map((item) {
                     final isActive = currentPath == item['path'];
+                    final activeColor = Zjg.red;
+                    final inactiveColor = theme.colorScheme.secondary.withValues(alpha: 0.55);
                     return GestureDetector(
                       onTap: () => context.go(item['path'] as String),
                       behavior: HitTestBehavior.opaque,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // 真果鉴式选中指示：图标上方红色小横条
+                          Container(
+                            width: 26,
+                            height: 3.5,
+                            margin: const EdgeInsets.only(bottom: 5),
+                            decoration: BoxDecoration(
+                              color: isActive ? activeColor : Colors.transparent,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
                           Icon(
                             item['icon'] as IconData,
-                            size: 22,
-                            color: isActive 
-                                ? theme.colorScheme.primary 
-                                : theme.colorScheme.secondary.withValues(alpha: 0.5),
+                            size: 24,
+                            color: isActive ? activeColor : inactiveColor,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             item['label'] as String,
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                              color: isActive 
-                                  ? theme.colorScheme.primary 
-                                  : theme.colorScheme.secondary.withValues(alpha: 0.5),
+                              fontSize: 12.5,
+                              fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                              color: isActive ? activeColor : inactiveColor,
                             ),
                           ),
                         ],

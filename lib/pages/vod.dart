@@ -4,9 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/movie.dart';
 import '../models/site.dart';
+import '../core/theme.dart';
+import '../providers/favorites_provider.dart';
 import '../services/cms_service.dart';
 import '../services/config_service.dart';
-import '../providers/settings_provider.dart';
 import '../widgets/cover_image.dart';
 import 'search.dart';
 import 'video_detail.dart';
@@ -158,22 +159,48 @@ class _VodPageState extends ConsumerState<VodPage> {
     ));
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// 真果鉴式顶栏：站源下拉 + 搜索 + 更多（设置）
+  Widget _buildTopBar(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('影视'),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.settings, size: 20),
-            tooltip: '设置',
-            onPressed: () => context.push('/settings'),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+      child: Row(
+        children: [
+          // 站源下拉
+          PopupMenuButton<SiteConfig>(
+            offset: const Offset(0, 44),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            onSelected: (s) {
+              if (_site?.key != s.key) _selectSite(s);
+            },
+            itemBuilder: (_) => [
+              ..._sites.map((s) => PopupMenuItem<SiteConfig>(
+                    value: s,
+                    child: Row(
+                      children: [
+                        Expanded(child: Text(s.name, style: const TextStyle(fontSize: 16))),
+                        if (_site?.key == s.key)
+                          const Icon(Icons.check, size: 18, color: Zjg.red),
+                      ],
+                    ),
+                  )),
+            ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _site?.name ?? '选择站源',
+                  style: theme.textTheme.titleLarge?.copyWith(fontSize: 23, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: theme.hintColor),
+              ],
+            ),
           ),
+          const Spacer(),
           IconButton(
-            icon: const Icon(LucideIcons.search),
-            tooltip: '搜索当前源',
+            icon: const Icon(LucideIcons.search, size: 22),
+            tooltip: '搜索',
             onPressed: _site == null
                 ? null
                 : () {
@@ -182,99 +209,77 @@ class _VodPageState extends ConsumerState<VodPage> {
                     ));
                   },
           ),
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildChipSection(
-            context,
-            label: '视频源',
-            loading: false,
-            chips: _sites
-                .map((s) => _ChipData(
-                      label: s.name,
-                      selected: _site?.key == s.key,
-                      onTap: () {
-                        if (_site?.key != s.key) _selectSite(s);
-                      },
-                    ))
-                .toList(),
-            emptyHint: '未配置视频源，请先到设置添加',
+          IconButton(
+            icon: const Icon(LucideIcons.moreVertical, size: 22),
+            tooltip: '更多',
+            onPressed: () => context.push('/settings'),
           ),
-          _buildChipSection(
-            context,
-            label: '分类',
-            loading: _loadingCats,
-            chips: [
-              _ChipData(
-                label: '全部',
-                selected: _categoryId.isEmpty,
-                onTap: () => _onCategorySelected(''),
-              ),
-              ..._categories.map((c) => _ChipData(
-                    label: c.name,
-                    selected: _categoryId == c.id,
-                    onTap: () => _onCategorySelected(c.id),
-                  )),
-            ],
-            emptyHint: _site == null ? '' : '该源暂无分类',
-          ),
-          Expanded(child: _buildBody(theme)),
         ],
       ),
     );
   }
 
-  Widget _buildChipSection(
-    BuildContext context, {
-    required String label,
-    required bool loading,
-    required List<_ChipData> chips,
-    required String emptyHint,
-  }) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: Text(label, style: theme.textTheme.labelMedium?.copyWith(color: theme.hintColor)),
-        ),
-        SizedBox(
-          height: 40,
-          child: loading
-              ? const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : chips.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(emptyHint, style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor)),
-                      ),
-                    )
-                  : ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: chips.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final c = chips[i];
-                        return ChoiceChip(
-                          label: Text(c.label),
-                          selected: c.selected,
-                          onSelected: (_) => c.onTap(),
-                        );
-                      },
+  /// 真果鉴式分类 chip（横滑单行）
+  Widget _buildCategoryChips(BuildContext context) {
+    final chips = <_ChipData>[
+      _ChipData(label: '全部', selected: _categoryId.isEmpty, onTap: () => _onCategorySelected('')),
+      ..._categories.map((c) => _ChipData(
+            label: c.name,
+            selected: _categoryId == c.id,
+            onTap: () => _onCategorySelected(c.id),
+          )),
+    ];
+    return SizedBox(
+      height: 52,
+      child: _loadingCats
+          ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+          : ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              itemCount: chips.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemBuilder: (_, i) {
+                final c = chips[i];
+                return GestureDetector(
+                  onTap: c.onTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c.selected ? Zjg.chipPink : Colors.white,
+                      borderRadius: BorderRadius.circular(Zjg.chipRadius),
+                      border: Border.all(color: c.selected ? Zjg.chipPink : Zjg.chipBorder),
                     ),
+                    child: Text(
+                      c.label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: c.selected ? FontWeight.w600 : FontWeight.normal,
+                        color: c.selected ? Zjg.chipPinkInk : Zjg.ink,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTopBar(context),
+            _buildCategoryChips(context),
+            Expanded(child: _buildBody(theme)),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -292,12 +297,11 @@ class _VodPageState extends ConsumerState<VodPage> {
         child: Text('该分类暂无内容', style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor)),
       );
     }
-    final userColumns = ref.watch(gridColumnsProvider);
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        // 移动端用用户设置的列数，大屏保持响应式
-        final crossAxisCount = w > 800 ? 5 : (w > 600 ? 4 : userColumns);
+        // 真果鉴皮肤：移动端固定 3 列，大屏响应式
+        final crossAxisCount = w > 800 ? 5 : (w > 600 ? 4 : 3);
 
         // 单列用横向卡片列表
         if (crossAxisCount == 1) {
@@ -385,13 +389,12 @@ class _VodPageState extends ConsumerState<VodPage> {
           );
         }
 
-        // 2/3列：精确计算高宽比，消除底部留白
-        // 卡片 = 海报(3:4) + 6px + 标题(1行~20px) + 副标题(1行~16px)
+        // 真果鉴卡片 = 海报(2:3) + 8px + 标题(2行) + 3px + 分类(1行)
         const horizontalPadding = 32.0; // 16*2
         const spacing = 12.0;
         final itemWidth = (w - horizontalPadding - (crossAxisCount - 1) * spacing) / crossAxisCount;
-        const textHeight = 48.0;
-        final posterHeight = itemWidth / 0.75;
+        const textHeight = 68.0;
+        final posterHeight = itemWidth / (2 / 3);
         final childAspectRatio = itemWidth / (posterHeight + textHeight);
 
         return GridView.builder(
@@ -420,62 +423,101 @@ class _VodPageState extends ConsumerState<VodPage> {
               );
             }
             final v = _videos[i];
-            // 角标：剧集显示集数，电影显示时长
-            String? badgeText;
+            // 左下角集数：优先 remarks，否则按源站集数推算
+            String? epsText;
             if ((v.remarks ?? '').isNotEmpty) {
-              badgeText = v.remarks;
-            } else if ((v.duration ?? '').isNotEmpty) {
-              badgeText = v.duration;
+              epsText = v.remarks;
+            } else if (v.playGroups.isNotEmpty && v.playGroups.first.urls.isNotEmpty) {
+              epsText = '共 ${v.playGroups.first.urls.length} 集';
             }
             return GestureDetector(
               onTap: () => _openDetail(v),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
+                  SizedBox(
+                    height: posterHeight,
                     child: Stack(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: CoverImage(
-                            imageUrl: v.poster,
-                            fit: BoxFit.cover,
-                            // 横图取左半（F方案：书封面类）
-                            alignment: Alignment.centerLeft,
+                          borderRadius: BorderRadius.circular(Zjg.cardRadius),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: double.infinity,
+                            child: CoverImage(
+                              imageUrl: v.poster,
+                              fit: BoxFit.cover,
+                              alignment: Alignment.centerLeft,
+                            ),
                           ),
                         ),
-                        if (badgeText != null)
-                          Positioned(
-                            right: 6,
-                            bottom: 6,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.65),
-                                borderRadius: BorderRadius.circular(6),
+                        // 底部渐隐，保证压字可读
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(Zjg.cardRadius),
+                              gradient: LinearGradient(
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                colors: [Colors.black.withValues(alpha: 0.45), Colors.transparent],
+                                stops: const [0.0, 0.35],
                               ),
-                              child: Text(
-                                badgeText,
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                        // 右上 ···
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () => _showCardMenu(context, v),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.55),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Center(
+                                child: Text('···',
+                                    style: TextStyle(color: Colors.white, fontSize: 14, letterSpacing: 1, height: 1)),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // 左下角集数
+                        if (epsText != null)
+                          Positioned(
+                            left: 10,
+                            bottom: 8,
+                            child: Text(
+                              epsText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
                               ),
                             ),
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Text(
                     v.title,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, height: 1.35, color: Zjg.ink),
                   ),
-                  if ((v.typeName ?? '').isNotEmpty || (v.uploadTime ?? '').isNotEmpty)
-                    Text(
-                      [v.uploadTime, v.typeName].where((e) => (e ?? '').isNotEmpty).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                  if ((v.typeName ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        v.typeName!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12.5, color: Zjg.sub),
+                      ),
                     ),
                 ],
               ),
@@ -492,4 +534,77 @@ class _ChipData {
   final bool selected;
   final VoidCallback onTap;
   _ChipData({required this.label, required this.selected, required this.onTap});
+}
+
+/// 卡片右上 ··· 操作弹窗（真果鉴式居中圆角对话框）
+extension _CardMenu on _VodPageState {
+  void _showCardMenu(BuildContext context, VideoDetail v) {
+    final favState = ref.read(favoritesProvider);
+    final isFav = favState.maybeWhen(
+      data: (list) => list.any((e) => e.title == v.title),
+      orElse: () => false,
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 48),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 22, 22, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(v.title,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, height: 1.4)),
+              const SizedBox(height: 8),
+              _menuItem(
+                ctx,
+                icon: isFav ? LucideIcons.heart : LucideIcons.bookmark,
+                label: isFav ? '已在追剧' : '加入追剧',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ref.read(favoritesProvider.notifier).toggle(Favorite(
+                        title: v.title,
+                        sourceName: v.sourceName,
+                        cover: v.poster,
+                        year: v.year ?? '',
+                        totalEpisodes: v.playGroups.isNotEmpty ? v.playGroups.first.urls.length : 0,
+                        saveTime: DateTime.now().millisecondsSinceEpoch,
+                        searchTitle: v.title,
+                      ));
+                },
+              ),
+              _menuItem(
+                ctx,
+                icon: LucideIcons.playCircle,
+                label: '查看详情',
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openDetail(v);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuItem(BuildContext ctx, {required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: Zjg.ink),
+            const SizedBox(width: 14),
+            Text(label, style: const TextStyle(fontSize: 16.5, color: Zjg.ink)),
+          ],
+        ),
+      ),
+    );
+  }
 }
