@@ -603,7 +603,7 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
     }
   }
 
-  /// 真果鉴式圆形描边按钮
+  /// zgj式圆形描边按钮
   Widget _buildZjgCircleBtn({required IconData icon, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 7),
@@ -625,7 +625,7 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
     );
   }
 
-  /// 真果鉴式文字胶囊按钮（倍速 / 清晰度）
+  /// zgj式文字胶囊按钮（倍速 / 清晰度）
   Widget _buildZjgPillBtn({required String label, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 7),
@@ -665,7 +665,7 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 真果鉴式按钮行：播放/上一集/下一集/倍速/比例/全屏
+            // zgj式按钮行：播放/上一集/下一集/倍速/比例/全屏
             if (!_isLocked)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),

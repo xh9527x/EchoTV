@@ -159,7 +159,7 @@ class _VodPageState extends ConsumerState<VodPage> {
     ));
   }
 
-  /// 真果鉴式顶栏：站源下拉 + 搜索 + 更多（设置）
+  /// zgj式顶栏：站源下拉 + 搜索 + 更多（设置）
   Widget _buildTopBar(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
@@ -219,7 +219,7 @@ class _VodPageState extends ConsumerState<VodPage> {
     );
   }
 
-  /// 真果鉴式分类 chip（横滑单行）
+  /// zgj式分类 chip（横滑单行）
   Widget _buildCategoryChips(BuildContext context) {
     final chips = <_ChipData>[
       _ChipData(label: '全部', selected: _categoryId.isEmpty, onTap: () => _onCategorySelected('')),
@@ -300,7 +300,7 @@ class _VodPageState extends ConsumerState<VodPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = constraints.maxWidth;
-        // 真果鉴皮肤：移动端固定 3 列，大屏响应式
+        // zgj皮肤：移动端固定 3 列，大屏响应式
         final crossAxisCount = w > 800 ? 5 : (w > 600 ? 4 : 3);
 
         // 单列用横向卡片列表
@@ -389,7 +389,7 @@ class _VodPageState extends ConsumerState<VodPage> {
           );
         }
 
-        // 真果鉴卡片 = 海报(2:3) + 8px + 标题(2行) + 3px + 分类(1行)
+        // zgj卡片 = 海报(2:3) + 8px + 标题(2行) + 3px + 分类(1行)
         const horizontalPadding = 32.0; // 16*2
         const spacing = 12.0;
         final itemWidth = (w - horizontalPadding - (crossAxisCount - 1) * spacing) / crossAxisCount;
@@ -536,7 +536,7 @@ class _ChipData {
   _ChipData({required this.label, required this.selected, required this.onTap});
 }
 
-/// 卡片右上 ··· 操作弹窗（真果鉴式居中圆角对话框）
+/// 卡片右上 ··· 操作弹窗（zgj式居中圆角对话框）
 extension _CardMenu on _VodPageState {
   void _showCardMenu(BuildContext context, VideoDetail v) {
     final favState = ref.read(favoritesProvider);
