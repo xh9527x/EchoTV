@@ -1,26 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+/// 真果鉴皮肤 token（skin-zhenguojian 分支，实测取色）
+/// 页面底 #FAF8F6 / 正文 #252328 / 次要 #68636C / 主色砖红 #AD3826
+/// 选中 chip 底 #FFDAD4 + 字 #5D3F3A
+class Zjg {
+  static const Color pageBg = Color(0xFFFAF8F6);
+  static const Color ink = Color(0xFF252328);
+  static const Color sub = Color(0xFF68636C);
+  static const Color faint = Color(0xFFA8A5A3);
+  static const Color red = Color(0xFFAD3826);
+  static const Color chipPink = Color(0xFFFFDAD4);
+  static const Color chipPinkInk = Color(0xFF5D3F3A);
+  static const Color chipBorder = Color(0xFFE6E0DB);
+  static const Color searchBarBg = Color(0xFFF1ECE9);
+  static const double cardRadius = 9.0;
+  static const double chipRadius = 10.0;
+}
+
 class ZenTheme {
-  // --- 色彩系统 (iOS 17+ Style) ---
+  // --- 色彩系统 (真果鉴皮肤 / iOS 17+ Style) ---
 
   // Light Theme Colors
-  static const Color lightBackground = Color(0xFFF2F2F7); // 系统浅灰背景
-  static const Color lightSurface = Color(0xFFFFFFFF);    // 纯白容器
-  static const Color lightSurfaceElevated = Color(0xFFFFFFFF); 
-  static const Color lightTextPrimary = Color(0xFF000000);   // 纯黑文字
-  static const Color lightTextSecondary = Color(0xFF636366); // 深灰次要文字
-  static const Color lightTextTertiary = Color(0xFF8E8E93);  // 浅灰三级文字
-  static const Color lightAccent = Color(0xFF000000);        // 亮色主题下主色调使用黑色，体现 Zen 风格
+  static const Color lightBackground = Zjg.pageBg;           // 暖白底
+  static const Color lightSurface = Color(0xFFFFFFFF);      // 纯白容器
+  static const Color lightSurfaceElevated = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Zjg.ink;            // 近黑文字
+  static const Color lightTextSecondary = Zjg.sub;          // 灰次要文字
+  static const Color lightTextTertiary = Zjg.faint;         // 浅灰三级文字
+  static const Color lightAccent = Zjg.red;                 // 砖红主色
 
   // Dark Theme Colors
   static const Color darkBackground = Color(0xFF000000);     // 纯黑背景 (OLED Optimized)
   static const Color darkSurface = Color(0xFF1C1C1E);        // 深灰容器
-  static const Color darkSurfaceElevated = Color(0xFF2C2C2E); 
+  static const Color darkSurfaceElevated = Color(0xFF2C2C2E);
   static const Color darkTextPrimary = Color(0xFFFFFFFF);    // 纯白文字
   static const Color darkTextSecondary = Color(0xFFAEAEB2);  // 浅灰次要文字
   static const Color darkTextTertiary = Color(0xFF636366);   // 深灰三级文字
-  static const Color darkAccent = Color(0xFFFFFFFF);         // 暗色主题下主色调使用白色
+  static const Color darkAccent = Color(0xFFC05A44);         // 暗色下砖红提亮，保证可见度
 
   static const Color accentBlue = Color(0xFF0A84FF);         // iOS 标准蓝色，用于链接或特定点缀
 

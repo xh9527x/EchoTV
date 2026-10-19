@@ -16,6 +16,7 @@ import 'pages/favorites.dart';
 import 'pages/about.dart';
 import 'pages/search.dart';
 import 'pages/vod.dart';
+import 'pages/downloads.dart';
 import 'providers/settings_provider.dart';
 import 'services/ad_block_service.dart';
 import 'services/config_service.dart';
@@ -310,10 +311,18 @@ final _router = GoRouter(
       },
       routes: [
         GoRoute(
+          // 真果鉴皮肤：首页 = CMS 影视聚合（VodPage 已换皮）
           path: '/',
           pageBuilder: (context, state) => _buildPageWithPlatformTransition(
             state,
-            const HomePage(),
+            const VodPage(),
+          ),
+        ),
+        GoRoute(
+          path: '/downloads',
+          pageBuilder: (context, state) => _buildPageWithPlatformTransition(
+            state,
+            const DownloadsPage(),
           ),
         ),
         GoRoute(
