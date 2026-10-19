@@ -36,7 +36,7 @@ enum LoadingStage { searching, preferring, fetching, ready }
 
 class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsBindingObserver, TickerProviderStateMixin {
   late TabController _tabController;
-  late TabController _mainTabController; // 真果鉴式：选集/简介/下载
+  late TabController _mainTabController; // zgj式：选集/简介/下载
   late HistoryNotifier _historyNotifier;
   final Set<int> _dlSelected = {}; // 下载 tab 本地多选
   
@@ -591,7 +591,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                           ),
                         ],
                       )
-                    // 移动端真果鉴式：播放器 + 选集/简介/下载三 tab
+                    // 移动端zgj式：播放器 + 选集/简介/下载三 tab
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -607,7 +607,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     );
   }
 
-  // ================= 真果鉴式三 tab（移动端） =================
+  // ================= zgj式三 tab（移动端） =================
 
   Widget _buildZjgMainTabs(ThemeData theme) {
     return Column(
@@ -639,7 +639,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     );
   }
 
-  /// 选集 tab：源站切换行 + 真果鉴式选集按钮
+  /// 选集 tab：源站切换行 + zgj式选集按钮
   Widget _buildZjgEpisodeTab(ThemeData theme) {
     if (_isSearching && _availableSources.isEmpty) {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
