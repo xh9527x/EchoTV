@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../core/theme.dart';
 
-/// 下载管理（真果鉴皮肤 v1 占位：仅空状态，后续版本接入下载能力）
+/// 下载管理（zgj皮肤 v1 占位：仅空状态，后续版本接入下载能力）
 class DownloadsPage extends StatelessWidget {
   const DownloadsPage({super.key});
 

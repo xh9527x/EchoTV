@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// 真果鉴皮肤 token（skin-zhenguojian 分支，实测取色）
+/// zgj皮肤 token（skin-zhenguojian 分支，实测取色）
 /// 页面底 #FAF8F6 / 正文 #252328 / 次要 #68636C / 主色砖红 #AD3826
 /// 选中 chip 底 #FFDAD4 + 字 #5D3F3A
 class Zjg {
@@ -19,7 +19,7 @@ class Zjg {
 }
 
 class ZenTheme {
-  // --- 色彩系统 (真果鉴皮肤 / iOS 17+ Style) ---
+  // --- 色彩系统 (zgj皮肤 / iOS 17+ Style) ---
 
   // Light Theme Colors
   static const Color lightBackground = Zjg.pageBg;           // 暖白底

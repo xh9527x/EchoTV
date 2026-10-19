@@ -311,7 +311,7 @@ final _router = GoRouter(
       },
       routes: [
         GoRoute(
-          // 真果鉴皮肤：首页 = CMS 影视聚合（VodPage 已换皮）
+          // zgj皮肤：首页 = CMS 影视聚合（VodPage 已换皮）
           path: '/',
           pageBuilder: (context, state) => _buildPageWithPlatformTransition(
             state,

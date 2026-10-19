@@ -20,7 +20,7 @@ class MainLayout extends ConsumerWidget {
       builder: (context, constraints) {
         final isPC = constraints.maxWidth > 800;
 
-        // 真果鉴皮肤：固定 4 tab（发现/追剧/最近观看/下载）
+        // zgj皮肤：固定 4 tab（发现/追剧/最近观看/下载）
         final coreNavItems = [
           {'path': '/', 'label': '发现', 'icon': LucideIcons.compass},
           {'path': '/favorites', 'label': '追剧', 'icon': LucideIcons.bookmark},
@@ -157,7 +157,7 @@ class MainLayout extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // 真果鉴式选中指示：图标上方红色小横条
+                          // zgj式选中指示：图标上方红色小横条
                           Container(
                             width: 26,
                             height: 3.5,
