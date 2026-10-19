@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/movie.dart';
 import '../models/site.dart';
+import '../core/theme.dart';
 import '../services/cms_service.dart';
 import '../services/douban_service.dart';
 import '../services/config_service.dart';
@@ -35,7 +36,9 @@ enum LoadingStage { searching, preferring, fetching, ready }
 
 class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsBindingObserver, TickerProviderStateMixin {
   late TabController _tabController;
+  late TabController _mainTabController; // 真果鉴式：选集/简介/下载
   late HistoryNotifier _historyNotifier;
+  final Set<int> _dlSelected = {}; // 下载 tab 本地多选
   
   DoubanSubject? _fullSubject;
   List<Map<String, String>>? _credits;
@@ -72,6 +75,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _mainTabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addObserver(this);
     _doubanId = widget.subject.id;
     _checkHistoryAndLoadData();
@@ -448,6 +452,14 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     }
   }
 
+  void _playPrevEpisode() {
+    if (_currentSource == null) return;
+    final prevIndex = _currentEpisodeIndex - 1;
+    if (prevIndex >= 0) {
+      _handlePlayAction(prevIndex);
+    }
+  }
+
   Future<void> _savePlayRecord(Duration position, Duration duration, {bool isFinal = false}) async {
     if (_currentSource == null || !mounted) return;
     
@@ -483,6 +495,7 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
+    _mainTabController.dispose();
     super.dispose();
   }
 
@@ -555,31 +568,37 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
                 ],
               ),
               SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 播放器0间隙：在Padding外面，左右顶满；顶部8px避开导航栏
-                    const SizedBox(height: 8),
-                    _buildVideoPlayer(theme, isPC),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
-                      child: Column(
+                child: isPC
+                    ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildCollapsibleInfo(theme, isPC),
-                          const SizedBox(height: 12),
-                          _buildEpisodePanel(theme, isPC ? _calculatePlayerHeight(screenWidth) : 360),
-                          // 移动端：信息已在折叠区显示，底部不再重复；PC端保持原布局
-                          if (isPC) ...[
-                            const SizedBox(height: 24),
-                            _buildDetailSection(theme, isPC),
-                          ],
-                          const SizedBox(height: 80),
+                          // 播放器0间隙：在Padding外面，左右顶满；顶部8px避开导航栏
+                          const SizedBox(height: 8),
+                          _buildVideoPlayer(theme, isPC),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildCollapsibleInfo(theme, isPC),
+                                const SizedBox(height: 12),
+                                _buildEpisodePanel(theme, _calculatePlayerHeight(screenWidth)),
+                                const SizedBox(height: 24),
+                                _buildDetailSection(theme, isPC),
+                                const SizedBox(height: 80),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    // 移动端真果鉴式：播放器 + 选集/简介/下载三 tab
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildVideoPlayer(theme, isPC),
+                          _buildZjgMainTabs(theme),
                         ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -588,52 +607,411 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
     );
   }
 
-  Widget _buildPlayerAndEpisodeSection(ThemeData theme, bool isPC, double screenWidth) {
-    if (!isPC) {
-      return Column(children: [
-        _buildVideoPlayer(theme, false),
-        _buildCollapsibleInfo(theme, false),
-        const SizedBox(height: 12),
-        _buildEpisodePanel(theme, 360),
-      ]);
-    }
+  // ================= 真果鉴式三 tab（移动端） =================
+
+  Widget _buildZjgMainTabs(ThemeData theme) {
     return Column(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 7, child: _buildVideoPlayer(theme, true)),
-            const SizedBox(width: 24),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: _isEpisodeSelectorCollapsed ? 0 : (screenWidth > 1400 ? 400 : 360),
-              child: _isEpisodeSelectorCollapsed ? const SizedBox() : _buildEpisodePanel(theme, _calculatePlayerHeight(screenWidth)),
-            ),
-          ],
+        TabBar(
+          controller: _mainTabController,
+          indicatorColor: Zjg.red,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.label,
+          indicatorPadding: const EdgeInsets.only(bottom: 2),
+          labelColor: Zjg.ink,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          unselectedLabelColor: Zjg.sub,
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 16),
+          tabs: const [Tab(text: '选集'), Tab(text: '简介'), Tab(text: '下载')],
         ),
-        const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerRight,
-          child: GestureDetector(
-            onTap: () => setState(() => _isEpisodeSelectorCollapsed = !_isEpisodeSelectorCollapsed),
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(10), border: Border.all(color: theme.dividerColor)),
+        SizedBox(
+          height: 430,
+          child: TabBarView(
+            controller: _mainTabController,
+            children: [
+              _buildZjgEpisodeTab(theme),
+              _buildZjgInfoTab(theme),
+              _buildZjgDownloadTab(theme),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 选集 tab：源站切换行 + 真果鉴式选集按钮
+  Widget _buildZjgEpisodeTab(ThemeData theme) {
+    if (_isSearching && _availableSources.isEmpty) {
+      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+    }
+    if (_currentSource == null) {
+      return Center(
+          child: Text(_noSitesConfigured ? '未配置有效视频源' : '暂无资源',
+              style: const TextStyle(color: Zjg.sub, fontSize: 14)));
+    }
+    final group = _currentSource!.playGroups.first;
+    final multiSource = _availableSources.length > 1;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 源站切换行（多源时显示）
+        if (multiSource)
+          GestureDetector(
+            onTap: () => _showSourceSheet(theme),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.server, size: 15, color: Zjg.sub),
+                  const SizedBox(width: 6),
+                  Text(_currentSource!.sourceName,
+                      style: const TextStyle(fontSize: 14, color: Zjg.sub, fontWeight: FontWeight.w500)),
+                  const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Zjg.sub),
+                  const SizedBox(width: 8),
+                  Text('共 ${group.urls.length} 集', style: const TextStyle(fontSize: 13, color: Zjg.faint)),
+                ],
+              ),
+            ),
+          ),
+        // 自动连播 + 排序
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => _autoPlayNext = !_autoPlayNext),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(_isEpisodeSelectorCollapsed ? LucideIcons.maximize2 : LucideIcons.minimize2, size: 14, color: theme.colorScheme.secondary),
-                    const SizedBox(width: 8),
-                    Text(_isEpisodeSelectorCollapsed ? '展开选集' : '收起选集', style: TextStyle(fontSize: 12, color: theme.colorScheme.secondary)),
+                    Icon(_autoPlayNext ? LucideIcons.playCircle : LucideIcons.stopCircle,
+                        size: 15, color: _autoPlayNext ? Zjg.red : Zjg.faint),
+                    const SizedBox(width: 6),
+                    Text('自动连播',
+                        style: TextStyle(fontSize: 13, color: _autoPlayNext ? Zjg.red : Zjg.faint)),
                   ],
                 ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _descending = !_descending),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.arrowUpDown, size: 14, color: Zjg.red),
+                    const SizedBox(width: 4),
+                    Text(_descending ? '倒序' : '正序',
+                        style: const TextStyle(fontSize: 13, color: Zjg.red, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: List.generate(group.urls.length, (i) {
+                final index = _descending ? (group.urls.length - 1 - i) : i;
+                final isCurrent = _currentEpisodeIndex == index;
+                return GestureDetector(
+                  onTap: () => _handlePlayAction(index),
+                  child: Container(
+                    width: 62,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isCurrent ? Zjg.chipPink : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: isCurrent ? const Color(0xFFF0B9B0) : Zjg.chipBorder),
+                    ),
+                    child: Text(
+                      group.titles[index],
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: isCurrent ? FontWeight.w700 : FontWeight.normal,
+                        color: isCurrent ? Zjg.chipPinkInk : Zjg.ink,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showSourceSheet(ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 44, height: 5,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(color: Zjg.chipBorder, borderRadius: BorderRadius.circular(3))),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text('切换源站', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              ),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: _availableSources
+                      .map((s) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _buildSourceCard(theme, s, isSelected: s == _currentSource),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 简介 tab：信息卡 + 加入追剧 + 标签 + 简介
+  Widget _buildZjgInfoTab(ThemeData theme) {
+    final subject = _fullSubject ?? widget.subject;
+    final src = _currentSource;
+    final epCount = src != null && src.playGroups.isNotEmpty ? src.playGroups.first.urls.length : 0;
+    final metaLine = [
+      if (src != null) src.sourceName,
+      if (epCount > 0) '共 $epCount 集',
+      if (src != null && (src.typeName ?? '').isNotEmpty) src.typeName!,
+    ].where((e) => e.isNotEmpty).join(' · ');
+
+    final tags = <String>[
+      ...subject.genres,
+      if ((subject.countries.isNotEmpty)) subject.countries.first,
+      if ((subject.year ?? '').isNotEmpty) '${subject.year}年',
+      if (subject.rate != '0.0' && subject.rate.isNotEmpty) '评分 ${subject.rate}',
+    ];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 信息卡
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(9),
+                  child: SizedBox(
+                      width: 96, height: 128, child: CoverImage(imageUrl: subject.cover, fit: BoxFit.cover)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(subject.title,
+                          style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Zjg.ink)),
+                      if (metaLine.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(metaLine, style: const TextStyle(fontSize: 13.5, color: Zjg.sub)),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 加入追剧
+          Consumer(
+            builder: (context, ref, _) {
+              final favState = ref.watch(favoritesProvider);
+              final isFav = favState.maybeWhen(
+                data: (list) => list.any((e) => e.title == subject.title),
+                orElse: () => false,
+              );
+              return GestureDetector(
+                onTap: () {
+                  ref.read(favoritesProvider.notifier).toggle(Favorite(
+                        title: subject.title,
+                        sourceName: src?.sourceName ?? '',
+                        cover: subject.cover,
+                        year: subject.year ?? '',
+                        totalEpisodes: epCount,
+                        saveTime: DateTime.now().millisecondsSinceEpoch,
+                        searchTitle: subject.title,
+                      ));
+                },
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration:
+                      BoxDecoration(color: Zjg.searchBarBg, borderRadius: BorderRadius.circular(12)),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(isFav ? LucideIcons.heart : LucideIcons.bookmarkPlus,
+                          size: 20, color: isFav ? Zjg.red : Zjg.ink),
+                      const SizedBox(width: 8),
+                      Text(isFav ? '已在追剧' : '加入追剧',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Zjg.ink)),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Zjg.sub),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          // 标签
+          if (tags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: tags
+                    .map((t) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(9),
+                              border: Border.all(color: Zjg.chipBorder)),
+                          child: Text(t, style: const TextStyle(fontSize: 14.5, color: Zjg.ink)),
+                        ))
+                    .toList(),
+              ),
+            ),
+          // 简介
+          if ((subject.description ?? '').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+              child: Text(subject.description!,
+                  style: const TextStyle(fontSize: 15, height: 1.8, color: Zjg.ink)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 下载 tab（v1 视觉版：本地多选 + 提示，后续版本接下载能力）
+  Widget _buildZjgDownloadTab(ThemeData theme) {
+    final src = _currentSource;
+    if (src == null || src.playGroups.isEmpty) {
+      return const Center(child: Text('暂无可下载剧集', style: TextStyle(color: Zjg.sub, fontSize: 14)));
+    }
+    final group = src.playGroups.first;
+    final total = group.urls.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+          child: Row(
+            children: [
+              const Text('下载选集', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: Zjg.ink)),
+              const Spacer(),
+              Text('已选 ${_dlSelected.length}', style: const TextStyle(fontSize: 13.5, color: Zjg.sub)),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Row(
+            children: [
+              _dlAction('全选', () => setState(() => _dlSelected.addAll(List.generate(total, (i) => i)))),
+              const SizedBox(width: 22),
+              _dlAction('清空', () => setState(() => _dlSelected.clear())),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(18, 4, 18, 0),
+          child: Text('保存源站原始视频；指定画质不可用时自动使用可用版本。',
+              style: TextStyle(fontSize: 13, color: Zjg.sub, height: 1.6)),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: List.generate(total, (i) {
+                final selected = _dlSelected.contains(i);
+                return GestureDetector(
+                  onTap: () => setState(() {
+                    selected ? _dlSelected.remove(i) : _dlSelected.add(i);
+                  }),
+                  child: Container(
+                    width: 62,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? Zjg.chipPink : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: selected ? const Color(0xFFF0B9B0) : Zjg.chipBorder),
+                    ),
+                    child: Text(group.titles[i],
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
+                            color: selected ? Zjg.chipPinkInk : Zjg.ink)),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 8, 18, 20),
+          child: SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: _dlSelected.isEmpty
+                  ? null
+                  : () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('下载功能将在后续版本加入'))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Zjg.red,
+                disabledBackgroundColor: Zjg.red.withValues(alpha: 0.35),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.download, size: 20, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text('加入下载 · ${_dlSelected.length} 集',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
+                ],
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _dlAction(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(label, style: const TextStyle(fontSize: 15, color: Zjg.red)),
     );
   }
 
@@ -684,6 +1062,8 @@ class _VideoDetailPageState extends ConsumerState<VideoDetailPage> with WidgetsB
         },
         hasNextEpisode: _currentEpisodeIndex < _currentSource!.playGroups.first.urls.length - 1,
         onNextEpisode: _playNextEpisode,
+        hasPrevEpisode: _currentEpisodeIndex > 0,
+        onPrevEpisode: _playPrevEpisode,
         onProgress: (pos, dur, {isFinal = false}) => _savePlayRecord(pos, dur, isFinal: isFinal),
         onEnded: _autoPlayNext ? _playNextEpisode : null,
       );

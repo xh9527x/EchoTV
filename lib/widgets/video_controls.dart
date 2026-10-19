@@ -17,6 +17,8 @@ class ZenVideoControls extends StatefulWidget {
   final VoidCallback? onAdBlockingToggle;
   final VoidCallback? onNextEpisode;
   final bool hasNextEpisode;
+  final VoidCallback? onPrevEpisode;
+  final bool hasPrevEpisode;
   final SkipConfig skipConfig;
   final Function(SkipConfig)? onSkipConfigChange;
   final double initialVolume;
@@ -28,6 +30,8 @@ class ZenVideoControls extends StatefulWidget {
     this.onAdBlockingToggle,
     this.onNextEpisode,
     this.hasNextEpisode = false,
+    this.onPrevEpisode,
+    this.hasPrevEpisode = false,
     required this.skipConfig,
     this.onSkipConfigChange,
     this.initialVolume = 0.5,
@@ -584,13 +588,73 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
     );
   }
 
+  void _toggleFullScreen(BuildContext context) {
+    if (_chewieController?.isFullScreen ?? false) {
+      _chewieController?.exitFullScreen();
+      if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (context.mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).maybePop();
+          }
+        });
+      }
+    } else {
+      _chewieController?.enterFullScreen();
+    }
+  }
+
+  /// 真果鉴式圆形描边按钮
+  Widget _buildZjgCircleBtn({required IconData icon, required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: GestureDetector(
+        onTap: () {
+          onTap();
+          _cancelAndRestartTimer();
+        },
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ),
+    );
+  }
+
+  /// 真果鉴式文字胶囊按钮（倍速 / 清晰度）
+  Widget _buildZjgPillBtn({required String label, required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: GestureDetector(
+        onTap: () {
+          onTap();
+          _cancelAndRestartTimer();
+        },
+        child: Container(
+          height: 52,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(26),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1.5),
+          ),
+          child: Text(label,
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomBar(BuildContext context) {
-    final isLive = _chewieController?.isLive ?? false;
     return AnimatedOpacity(
       opacity: _displayToggles ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 300),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.bottomCenter,
@@ -601,44 +665,62 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildProgressBar(),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (!_isLocked) ...[
-                  if (_videoPlayerController != null) _buildPlayPause(_videoPlayerController!),
-                  if (widget.hasNextEpisode && widget.onNextEpisode != null)
-                    _buildIconBtn(LucideIcons.stepForward, widget.onNextEpisode!),
-                  if (_videoPlayerController != null) _buildVolumeButton(context),
-                  const SizedBox(width: 8),
-                  _buildPosition(context),
-                  
-                  const Spacer(),
-                  
-                  // 右侧组合：[设置] [应用全屏] [桌面全屏]
-                  if (!isLive)
-                    _buildIconBtn(LucideIcons.settings, () {
-                      setState(() {
+            // 真果鉴式按钮行：播放/上一集/下一集/倍速/比例/全屏
+            if (!_isLocked)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_videoPlayerController != null)
+                      _buildZjgCircleBtn(
+                        icon: _videoPlayerController!.value.isPlaying ? LucideIcons.pause : LucideIcons.play,
+                        onTap: () {
+                          if (_videoPlayerController!.value.isPlaying) {
+                            _videoPlayerController!.pause();
+                          } else {
+                            _videoPlayerController!.play();
+                          }
+                        },
+                      ),
+                    if (widget.hasPrevEpisode && widget.onPrevEpisode != null)
+                      _buildZjgCircleBtn(icon: LucideIcons.skipBack, onTap: widget.onPrevEpisode!),
+                    if (widget.hasNextEpisode && widget.onNextEpisode != null)
+                      _buildZjgCircleBtn(icon: LucideIcons.skipForward, onTap: widget.onNextEpisode!),
+                    _buildZjgPillBtn(
+                      label: '${_latestValue?.playbackSpeed ?? 1.0}x',
+                      onTap: () => setState(() {
+                        _showSpeedSubMenu = true;
                         _showSettings = true;
                         _displayToggles = true;
-                      });
-                    }),
-
-                  _buildIconBtn(LucideIcons.expand, () {
-                    if (_chewieController?.isFullScreen ?? false) {
-                      _chewieController?.exitFullScreen();
-                      if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          if (context.mounted && Navigator.of(context).canPop()) {
-                            Navigator.of(context).maybePop();
-                          }
-                        });
-                      }
-                    } else {
-                      _chewieController?.enterFullScreen();
-                    }
-                  }),
-                ],
+                      }),
+                    ),
+                    _buildZjgPillBtn(
+                      label: '自动',
+                      onTap: () => setState(() {
+                        _showSettings = true;
+                        _displayToggles = true;
+                      }),
+                    ),
+                    _buildZjgCircleBtn(
+                      icon: (_chewieController?.isFullScreen ?? false)
+                          ? LucideIcons.shrink
+                          : LucideIcons.expand,
+                      onTap: () => _toggleFullScreen(context),
+                    ),
+                  ],
+                ),
+              ),
+            // 进度行：已播时间 + 进度条 + 总时长
+            Row(
+              children: [
+                Text(_formatDuration(_latestValue?.position ?? Duration.zero),
+                    style: const TextStyle(color: Colors.white, fontSize: 12)),
+                const SizedBox(width: 10),
+                Expanded(child: _buildProgressBar()),
+                const SizedBox(width: 10),
+                Text(_formatDuration(_latestValue?.duration ?? Duration.zero),
+                    style: const TextStyle(color: Colors.white, fontSize: 12)),
               ],
             ),
           ],
@@ -651,70 +733,6 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
     return _HoverableIcon(icon: icon, onTap: onTap, size: size);
   }
 
-  Widget _buildVolumeButton(BuildContext context) {
-    final volume = _videoPlayerController?.value.volume ?? 1.0;
-    IconData iconData = LucideIcons.volume2;
-    if (volume == 0) {
-      iconData = LucideIcons.volumeX;
-    } else if (volume < 0.5) {
-      iconData = LucideIcons.volume1;
-    }
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _showVolumeSlider = true),
-      onExit: (_) => setState(() => _showVolumeSlider = false),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _HoverableIcon(
-            icon: iconData,
-            onTap: () {
-              if (volume > 0) {
-                _lastVolume = volume;
-                _videoPlayerController?.setVolume(0.0);
-              } else {
-                _videoPlayerController?.setVolume(_lastVolume);
-              }
-              _cancelAndRestartTimer();
-            },
-          ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: _showVolumeSlider ? 100 : 0,
-            height: 30,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const NeverScrollableScrollPhysics(),
-              child: SizedBox(
-                width: 100,
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 2.0,
-                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.0),
-                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12.0),
-                    activeTrackColor: Colors.white,
-                    inactiveTrackColor: Colors.white24,
-                    thumbColor: Colors.white,
-                  ),
-                  child: Slider(
-                    value: volume,
-                    onChanged: (val) {
-                      _videoPlayerController?.setVolume(val);
-                      if (val > 0) {
-                        _lastVolume = val;
-                        widget.onVolumeChanged?.call(val);
-                      }
-                      _cancelAndRestartTimer();
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _handleVerticalDragUpdate(DragUpdateDetails details) {
     if (_videoPlayerController == null || _isLocked) return;
@@ -824,29 +842,7 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
     );
   }
 
-  Widget _buildPlayPause(VideoPlayerController controller) {
-    return _HoverableIcon(
-      icon: controller.value.isPlaying ? LucideIcons.pause : LucideIcons.play,
-      onTap: () {
-        if (controller.value.isPlaying) {
-          controller.pause();
-        } else {
-          controller.play();
-        }
-        _cancelAndRestartTimer();
-      },
-      size: 20,
-    );
-  }
 
-  Widget _buildPosition(BuildContext context) {
-    final position = _latestValue?.position ?? Duration.zero;
-    final duration = _latestValue?.duration ?? Duration.zero;
-    return Text(
-      '${_formatDuration(position)} / ${_formatDuration(duration)}',
-      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w400),
-    );
-  }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
@@ -875,7 +871,7 @@ class _ZenVideoControlsState extends State<ZenVideoControls> with WindowListener
               pressedElevation: 4,
             ),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 10.0),
-            activeTrackColor: const Color(0xFF0A84FF),
+            activeTrackColor: Colors.white,
             inactiveTrackColor: Colors.white.withValues(alpha: 0.2),
             thumbColor: Colors.white,
             trackShape: const RectangularSliderTrackShape(),
